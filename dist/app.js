@@ -102,7 +102,13 @@ window.fetch = async (input, options) => {
   const endpoint = url.pathname.split('/').pop();
   switch (endpoint) {
     case 'getSiteSnapshot': return json(data.snapshot);
-    case 'getLanyardPresence': return json(data.snapshot.presence);
+    case 'getLanyardPresence': {
+      try {
+        const r = await nativeFetch('/api/presence', {cache: 'no-store'});
+        if (r.ok) return json(await r.json());
+      } catch {}
+      return json(data.snapshot.presence);
+    }
     case 'recentActivity': return json(data.snapshot.recentActivities);
     case 'recentSongs': return json(await refreshListening());
     case 'getDiscordGameActivity': return json(data.snapshot.gameActivity);
