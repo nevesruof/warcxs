@@ -70,7 +70,7 @@ export function createStatsfm(fetcher, savedMusic) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
       try {
-        const response = await fetcher(`${API}${path}`, {signal: controller.signal, credentials: 'omit'});
+        const response = await fetcher(`${API}${path}`, {signal: controller.signal, credentials: 'omit', cache: 'no-store'});
         if (!response.ok) throw new Error('stats.fm is not sharing this data right now.');
         const value = await response.json();
         cache.set(path, {value, at: Date.now()});

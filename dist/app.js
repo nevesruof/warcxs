@@ -1,7 +1,7 @@
 // Local profile adapter with public listening history from the owner's stats.fm.
-import {createStatsfm} from './statsfm.js';
+import {createStatsfm, STATSFM_USER} from './statsfm.js';
 const nativeFetch = window.fetch.bind(window);
-const data = await nativeFetch('/data/profile.json').then(r => {
+const data = await nativeFetch('/data/profile.json', {cache: 'no-store'}).then(r => {
   if (!r.ok) throw new Error('Could not load profile content');
   return r.json();
 });
@@ -15,7 +15,44 @@ data.snapshot.recentActivities.forEach(item => {
   item.startedAt = item.lastSeenAt - 3600000;
 });
 const statsfm = createStatsfm(nativeFetch, data.music);
+// Only reuse history fetched from stats.fm, never the songs bundled at export time.
+const listeningCacheKey = 'statsfm-recent-v1';
+let lastListeningRefresh = 0;
+let listeningRequest = null;
+data.snapshot.recentSongs = [];
+try {
+  const saved = JSON.parse(localStorage.getItem(listeningCacheKey));
+  if (saved?.user === STATSFM_USER && Array.isArray(saved.songs)) {
+    data.snapshot.recentSongs = saved.songs.filter(song => song && typeof song.trackName === 'string' && Number.isFinite(song.listenedAt))
+      .sort((a, b) => b.listenedAt - a.listenedAt).slice(0, 20);
+  }
+} catch {}
 window.__statsfmRecentSongs = data.snapshot.recentSongs;
+
+async function refreshListening(minGapMs = 30000) {
+  if (listeningRequest) return listeningRequest;
+  if (Date.now() - lastListeningRefresh < minGapMs) return data.snapshot.recentSongs;
+  lastListeningRefresh = Date.now();
+  listeningRequest = (async () => {
+    try {
+      const songs = await statsfm.recent(true);
+      data.snapshot.recentSongs = songs;
+      data.snapshot.updatedAt.recentSongs = songs[0]?.listenedAt ?? Date.now();
+      window.__statsfmRecentSongs = songs;
+      try {
+        localStorage.setItem(listeningCacheKey, JSON.stringify({user: STATSFM_USER, songs}));
+        localStorage.setItem('cheatinformer-site-snapshot', JSON.stringify(data.snapshot));
+      } catch {}
+      window.dispatchEvent(new CustomEvent('statsfm:recent-songs', {detail: songs}));
+    } catch {
+      // Keep only the last successfully fetched history; retry on the next tick.
+    }
+    return data.snapshot.recentSongs;
+  })();
+  try { return await listeningRequest; }
+  finally { listeningRequest = null; }
+}
+
 data.snapshot.updatedAt.presence = loadedAt;
 try { localStorage.setItem('cheatinformer-site-snapshot', JSON.stringify(data.snapshot)); } catch {}
 
@@ -67,7 +104,7 @@ window.fetch = async (input, options) => {
     case 'getSiteSnapshot': return json(data.snapshot);
     case 'getLanyardPresence': return json(data.snapshot.presence);
     case 'recentActivity': return json(data.snapshot.recentActivities);
-    case 'recentSongs': return json(data.snapshot.recentSongs);
+    case 'recentSongs': return json(await refreshListening());
     case 'getDiscordGameActivity': return json(data.snapshot.gameActivity);
     case 'getGameInfo': return json(data.snapshot.gameInfo);
     case 'getGithubContributions': return json(data.github);
@@ -96,27 +133,12 @@ window.fetch = async (input, options) => {
   }
 };
 
+// Start the request before the interface loads, including while the entry screen is visible.
+void refreshListening(0);
 await import('/assets/index-D_CJfPsU.js');
-
-let lastListeningRefresh = 0;
-async function refreshListening(minGapMs = 0) {
-  if (document.hidden || Date.now() - lastListeningRefresh < minGapMs) return;
-  try {
-    // force = true skips the 5-minute response cache; otherwise every second tick was answered from cache.
-    const songs = await statsfm.recent(true);
-    lastListeningRefresh = Date.now();
-    data.snapshot.recentSongs = songs;
-    data.snapshot.updatedAt.recentSongs = songs[0]?.listenedAt ?? Date.now();
-    window.__statsfmRecentSongs = songs;
-    try { localStorage.setItem('cheatinformer-site-snapshot', JSON.stringify(data.snapshot)); } catch {}
-    window.dispatchEvent(new CustomEvent('statsfm:recent-songs', {detail: songs}));
-  } catch {
-    // Keep the last successful history with its original timestamps.
-  }
-}
-void refreshListening();
-setInterval(() => void refreshListening(), 5 * 60 * 1000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshListening(30 * 1000); });
+setInterval(() => { if (!document.hidden) void refreshListening(); }, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshListening(); });
+window.addEventListener('online', () => void refreshListening(0));
 
 // Standard keyboard dismissal and focus restoration for the original dialogs.
 let previousFocus = null;
