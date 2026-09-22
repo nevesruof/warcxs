@@ -63,6 +63,7 @@ function toLanyardActivity(item) {
     details: item.details ?? null,
     state: item.state ?? null,
     assets: item.image ? { large_image: item.image } : undefined,
+    timestamps: { start: Date.now() },
   };
 }
 
@@ -96,6 +97,10 @@ export default async function handler(req, res) {
               artist: spotifyItem.artist,
               album: spotifyItem.album,
               album_art_url: spotifyItem.image,
+              // el bot aun no manda el inicio/fin real de la cancion, asi que
+              // se aproxima con "ahora" para que la barra de progreso no truene.
+              // se puede afinar despues si el bot llega a exponer esos datos.
+              timestamps: { start: Date.now(), end: Date.now() + 210000 },
             }
           : null,
       },
