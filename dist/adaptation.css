@@ -1,0 +1,79 @@
+/* Preserve the reference layout; improve keyboard access and GPU fallbacks. */
+:focus-visible { outline: 2px solid #b2b2b8; outline-offset: 4px; }
+.roblox-avatar-card__fallback p { display: none; }
+.roblox-avatar-card__fallback img { object-fit: contain; }
+.profile-page { overflow-x: clip; }
+
+/* Separate, aligned tag and badge capsules from the supplied profile reference. */
+.profile-identity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.profile-identity-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.profile-clan-pill,
+.profile-badges-pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  border: 1px solid #ffffff03;
+  border-radius: 7px;
+  background: #19191c;
+}
+.profile-clan-pill {
+  gap: 4px;
+  min-width: 56px;
+  padding: 0 8px;
+  color: #f2f3f5;
+  font: 400 14px/1.2 Inter, sans-serif;
+  letter-spacing: -.35px;
+  cursor: default;
+}
+.profile-clan-icon {
+  display: block;
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  image-rendering: auto;
+}
+.profile-badges-pill {
+  gap: 4px;
+  padding: 0 6px;
+}
+.profile-badge-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.profile-badge-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  filter: none;
+}
+.profile-badge-item[aria-label="Server Booster"] .profile-badge-icon {
+  width: 21px;
+  height: 21px;
+  max-width: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}

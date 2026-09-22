@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="go" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d768df"/>
+      <stop offset="1" stop-color="#b93cc9"/>
+    </linearGradient>
+    <linearGradient id="gm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e3a4e8"/>
+      <stop offset="1" stop-color="#cc6ad6"/>
+    </linearGradient>
+    <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6ecf8"/>
+      <stop offset="1" stop-color="#dcc3e3"/>
+    </linearGradient>
+    <filter id="t" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.18" numOctaves="3" seed="3" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.08  0 0 0 0 0.48  0 0 0 3.2 -1.7" result="darkSpots"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 1  0 0 0 0 0.92  0 0 0 0 1  -2.6 0 0 0 1.1" result="lightSpots"/>
+      <feComposite in="darkSpots" in2="SourceAlpha" operator="in" result="darkIn"/>
+      <feComposite in="lightSpots" in2="SourceAlpha" operator="in" result="lightIn"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="lightIn"/><feMergeNode in="darkIn"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#t)">
+    <path d="M32 6 L59 57 H5 Z" fill="url(#go)" stroke="url(#go)" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M32 19 L50 52 H14 Z" fill="url(#gm)" stroke="url(#gm)" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M32 29.5 L43 47 H21 Z" fill="url(#gi)" stroke="url(#gi)" stroke-width="1.5" stroke-linejoin="round"/>
+  </g>
+  <path d="M32 6.5 L8 53" stroke="#ffd0ff" stroke-width="1.2" stroke-linecap="round" opacity=".22"/>
+</svg>

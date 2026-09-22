@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfddf4"/>
+      <stop offset="0.5" stop-color="#a9b5ee"/>
+      <stop offset="1" stop-color="#7f84e6"/>
+    </linearGradient>
+    <filter id="t" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.16" numOctaves="3" seed="11" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.36  0 0 0 0 0.4  0 0 0 0 0.78  0 0 0 3.2 -1.68" result="darkSpots"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.97  0 0 0 0 0.98  0 0 0 0 1  -2.6 0 0 0 1.1" result="lightSpots"/>
+      <feComposite in="darkSpots" in2="SourceAlpha" operator="in" result="darkIn"/>
+      <feComposite in="lightSpots" in2="SourceAlpha" operator="in" result="lightIn"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="lightIn"/><feMergeNode in="darkIn"/></feMerge>
+    </filter>
+  </defs>
+  <g transform="translate(32 33) scale(0.9) translate(-32 -32)"><g filter="url(#t)" fill="url(#g)">
+    <path d="M36.15 14.93 A14.2 16.8 0 1 1 27.85 14.93" fill="none" stroke="url(#g)" stroke-width="6.8" stroke-linecap="round"/>
+    <ellipse cx="38.45" cy="7.46" rx="9.0" ry="5.0" transform="rotate(-101.9 38.45 7.46)"/>
+    <ellipse cx="47.09" cy="13.97" rx="8.6" ry="4.8" transform="rotate(-78.6 47.09 13.97)"/>
+    <ellipse cx="52.16" cy="23.91" rx="8.2" ry="4.5" transform="rotate(-53.9 52.16 23.91)"/>
+    <ellipse cx="52.47" cy="35.09" rx="7.6" ry="4.2" transform="rotate(-30.0 52.47 35.09)"/>
+    <ellipse cx="48.28" cy="44.85" rx="6.8" ry="3.8" transform="rotate(-4.8 48.28 44.85)"/>
+    <ellipse cx="25.55" cy="7.46" rx="9.0" ry="5.0" transform="rotate(281.9 25.55 7.46)"/>
+    <ellipse cx="16.91" cy="13.97" rx="8.6" ry="4.8" transform="rotate(258.6 16.91 13.97)"/>
+    <ellipse cx="11.84" cy="23.91" rx="8.2" ry="4.5" transform="rotate(233.9 11.84 23.91)"/>
+    <ellipse cx="11.53" cy="35.09" rx="7.6" ry="4.2" transform="rotate(210.0 11.53 35.09)"/>
+    <ellipse cx="15.72" cy="44.85" rx="6.8" ry="3.8" transform="rotate(184.8 15.72 44.85)"/>
+    <ellipse cx="22.5" cy="56.2" rx="9.2" ry="3.4" transform="rotate(-14 22.5 56.2)"/>
+    <ellipse cx="41.5" cy="56.2" rx="9.2" ry="3.4" transform="rotate(14 41.5 56.2)"/>
+    <rect x="25.5" y="50.5" width="13" height="6.4" rx="3.2"/>
+  </g></g>
+</svg>
