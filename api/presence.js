@@ -97,16 +97,18 @@ export default async function handler(req, res) {
               artist: spotifyItem.artist,
               album: spotifyItem.album,
               album_art_url: spotifyItem.image,
-              // el bot aun no manda el inicio/fin real de la cancion, asi que
-              // se aproxima con "ahora" para que la barra de progreso no truene.
-              // se puede afinar despues si el bot llega a exponer esos datos.
-              timestamps: { start: Date.now(), end: Date.now() + 210000 },
+              // tiempo real de inicio/fin que manda Discord para esta cancion,
+              // asi el sitio sincroniza al segundo exacto en el que vas tu.
+              timestamps: {
+                start: spotifyItem.startMs ?? Date.now(),
+                end: spotifyItem.endMs ?? Date.now() + 210000,
+              },
             }
           : null,
       },
     };
 
-    res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=20');
+    res.setHeader('Cache-Control', 's-maxage=3, stale-while-revalidate=5');
     res.status(200).json(payload);
   } catch (err) {
     res.status(502).json({ success: false, error: 'activity bot unreachable' });
