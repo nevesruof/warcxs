@@ -111,7 +111,13 @@ window.fetch = async (input, options) => {
     }
     case 'recentActivity': return json(data.snapshot.recentActivities);
     case 'recentSongs': return json(await refreshListening());
-    case 'getDiscordGameActivity': return json(data.snapshot.gameActivity);
+    case 'getDiscordGameActivity': {
+      try {
+        const r = await nativeFetch('/api/game-activity', {cache: 'no-store'});
+        if (r.ok) return json(await r.json());
+      } catch {}
+      return json(data.snapshot.gameActivity);
+    }
     case 'getGameInfo': return json(data.snapshot.gameInfo);
     case 'getGithubContributions': return json(data.github);
     case 'getRobloxAvatar3d': {
