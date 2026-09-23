@@ -14,10 +14,10 @@ export default async function handler(req, res) {
     if (!r.ok) throw new Error(`bot respondio ${r.status}`);
     const bot = await r.json();
 
-    const games = (bot.recentActivities || []).filter((a) => a.kind && a.kind !== 'spotify');
-    const activities = games.map((a) => ({
+    const items = (bot.recentActivities || []).filter((a) => a.name);
+    const activities = items.map((a) => ({
       id: a.sessionId != null ? `discord-outbox:${a.sessionId}` : `discord-outbox:${a.name}-${a.firstSeen}`,
-      name: a.name,
+      name: a.kind === 'spotify' ? `${a.name} — ${a.artist}` : a.name,
       startedAt: a.firstSeen ? new Date(a.firstSeen * 1000).toISOString() : undefined,
       lastSeenAt: a.lastSeen ? new Date(a.lastSeen * 1000).toISOString() : undefined,
     }));
