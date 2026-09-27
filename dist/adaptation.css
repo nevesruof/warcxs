@@ -77,3 +77,25 @@
   html { scroll-behavior: auto !important; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Scroll within the existing profile card, including touch and keyboard. */
+.bento-cell--profile > .profile-scroll-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff55 transparent;
+}
+.profile-scroll-panel:focus-visible { outline: 1px solid #ffffff99; outline-offset: 2px; }
+.profile-bio-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: #fff;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.profile-bio-link:hover { color: #fff; }
+.profile-bio-link:focus-visible { outline: 1px solid white; outline-offset: 3px; }

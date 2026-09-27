@@ -1,5 +1,6 @@
 // Local profile adapter with public listening history from the owner's stats.fm.
 import {createStatsfm, STATSFM_USER} from './statsfm.js';
+import {createActivityHistory} from './activity-history.js';
 const nativeFetch = window.fetch.bind(window);
 const data = await nativeFetch('/data/profile.json', {cache: 'no-store'}).then(r => {
   if (!r.ok) throw new Error('Could not load profile content');
@@ -8,12 +9,22 @@ const data = await nativeFetch('/data/profile.json', {cache: 'no-store'}).then(r
 const json = (value, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { 'Content-Type': 'application/json' }
 });
-// Keep relative labels at the recorded values without claiming a live feed.
 const loadedAt = Date.now();
-data.snapshot.recentActivities.forEach(item => {
-  item.lastSeenAt = loadedAt - item.recordedHoursAgo * 3600000;
-  item.startedAt = item.lastSeenAt - 3600000;
+// Never display a bundled activity/status as live data.
+data.snapshot.presence.data = {...data.snapshot.presence.data, discord_status:'unknown',activities:[],
+  listening_to_spotify:false,spotify:null,active_on_discord_web:false,active_on_discord_desktop:false,active_on_discord_mobile:false};
+const history = createActivityHistory(nativeFetch, {
+  getItem:key=>localStorage.getItem(key), setItem:(key,value)=>localStorage.setItem(key,value)
+}, state => {
+  data.snapshot.recentActivities = state.recentActivities;
+  data.snapshot.gameActivity = state;
+  window.__activityHistory = state.recentActivities;
+  try { localStorage.setItem('cheatinformer-site-snapshot', JSON.stringify(data.snapshot)); } catch {}
+  window.dispatchEvent(new CustomEvent('activity:history', {detail:state.recentActivities}));
 });
+data.snapshot.recentActivities = history.current().recentActivities;
+data.snapshot.gameActivity = history.current();
+window.__activityHistory = data.snapshot.recentActivities;
 const statsfm = createStatsfm(nativeFetch, data.music);
 // Only reuse history fetched from stats.fm, never the songs bundled at export time.
 const listeningCacheKey = 'statsfm-recent-v1';
@@ -45,7 +56,13 @@ async function refreshListening(minGapMs = 30000) {
       } catch {}
       window.dispatchEvent(new CustomEvent('statsfm:recent-songs', {detail: songs}));
     } catch {
-      // Keep only the last successfully fetched history; retry on the next tick.
+      // If stats.fm is unavailable, use the music recorded by the bot.
+      const fallback = (await history.refresh()).recentSongs;
+      if (fallback?.length && (!data.snapshot.recentSongs.length || fallback[0].listenedAt > data.snapshot.recentSongs[0].listenedAt)) {
+        data.snapshot.recentSongs = fallback;
+        window.__statsfmRecentSongs = fallback;
+        window.dispatchEvent(new CustomEvent('statsfm:recent-songs', {detail:fallback}));
+      }
     }
     return data.snapshot.recentSongs;
   })();
@@ -105,19 +122,17 @@ window.fetch = async (input, options) => {
     case 'getLanyardPresence': {
       try {
         const r = await nativeFetch('/api/presence', {cache: 'no-store'});
-        if (r.ok) return json(await r.json());
+        if (r.ok) {
+          const presence = await r.json();
+          data.snapshot.presence = presence;
+          return json(presence);
+        }
       } catch {}
-      return json(data.snapshot.presence);
+      return json({...data.snapshot.presence,data:{...data.snapshot.presence.data,discord_status:'unknown',activities:[],listening_to_spotify:false,spotify:null,active_on_discord_web:false,active_on_discord_desktop:false,active_on_discord_mobile:false}});
     }
-    case 'recentActivity': return json(data.snapshot.recentActivities);
+    case 'recentActivity': return json((await history.refresh()).recentActivities);
     case 'recentSongs': return json(await refreshListening());
-    case 'getDiscordGameActivity': {
-      try {
-        const r = await nativeFetch('/api/game-activity', {cache: 'no-store'});
-        if (r.ok) return json(await r.json());
-      } catch {}
-      return json(data.snapshot.gameActivity);
-    }
+    case 'getDiscordGameActivity': return json(await history.refresh());
     case 'getGameInfo': return json(data.snapshot.gameInfo);
     case 'getGithubContributions': return json(data.github);
     case 'getRobloxAvatar3d': {
@@ -146,10 +161,12 @@ window.fetch = async (input, options) => {
 };
 
 // Start the request before the interface loads, including while the entry screen is visible.
+void history.refresh(true);
 void refreshListening(0);
 await import('/assets/index-D_CJfPsU.js');
 setInterval(() => { if (!document.hidden) void refreshListening(); }, 30000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshListening(); });
+setInterval(() => { if (!document.hidden) void history.refresh(); }, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) {void refreshListening();void history.refresh();} });
 window.addEventListener('online', () => void refreshListening(0));
 
 // Standard keyboard dismissal and focus restoration for the original dialogs.

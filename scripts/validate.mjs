@@ -6,7 +6,7 @@ const html = await readFile(resolve(root,'index.html'),'utf8');
 for (const match of html.matchAll(/(?:src|href)="(\/[^"?]+)(?:\?[^"\s]*)?"/g)) {
   await access(resolve(root,'.'+match[1]));
 }
-for(const file of ['app.js','statsfm.js',...(await readdir(resolve(root,'assets'))).filter(f=>f.endsWith('.js')).map(f=>'assets/'+f)]) {
+for(const file of ['app.js','statsfm.js','activity-history.js',...(await readdir(resolve(root,'assets'))).filter(f=>f.endsWith('.js')).map(f=>'assets/'+f)]) {
   const result=spawnSync(process.execPath,['--check',resolve(root,file)],{encoding:'utf8'});
   if(result.status!==0) throw new Error(result.stderr);
 }

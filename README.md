@@ -22,7 +22,7 @@ The reference's layout, breakpoints, entry animation, animated name, mouse effec
 
 ## Integration boundaries
 
-The private original APIs and profile socket are not contacted. View count and recent activity retain the reference snapshot. Music comes from the public wArcxs stats.fm profile, with the latest 20 listens and public rankings. Recent listening starts fetching before the interface loads and refreshes every 30 seconds while visible, when returning to the tab, and on reconnect. Only successfully fetched stats.fm history is persisted; the bundled song list is never used at startup. Statistics that are not shared by stats.fm remain unavailable.
+The private original APIs and profile socket are not contacted. View count retains the reference snapshot. Presence and activity history come from the personal bot through the server routes in api/. See CAMBIOS_Y_CONFIGURACION.md for configuration; the bot is delivered separately. Music comes from the public wArcxs stats.fm profile, with the latest 20 listens and public rankings. Recent listening starts fetching before the interface loads and refreshes every 30 seconds while visible, when returning to the tab, and on reconnect. Only successfully fetched stats.fm history is persisted; the bundled song list is never used at startup. Statistics that are not shared by stats.fm remain unavailable.
 
 The Roblox card shows an interactive 3D model when `avatar3d` in `dist/data/profile.json` lists the model files (`obj`, `mtl` and `textures` are Roblox CDN hashes, plus `targetId`). `dist/app.js` downloads them once in the browser from `*.rbxcdn.com`, so that CDN must allow cross-origin requests; if it does not, or the files are gone, the card shows the flat image from `robloxProfile.avatarUrl` instead. To refresh the model after an avatar change, open `https://thumbnails.roblox.com/v1/users/avatar-3d?userId=<id>`, then open its `imageUrl`, and copy the new `obj`, `mtl` and `textures` values into `avatar3d`. The original Roblox 3D endpoint itself requires authorization, so it is not contacted.
 
@@ -41,3 +41,8 @@ The original client assets were retrieved from the public site for this requeste
 This is a static site. The React interface and styles are included as bundled JavaScript and CSS in `dist/assets/`; the original unbundled JSX/TSX files are not part of this project. Profile data and the data adapters remain editable in `dist/data/profile.json`, `dist/app.js` and `dist/statsfm.js`.
 
 Use `npm ci` and `npm run dev` for local development. Run `npm run build` to validate the files. Deploy the contents of `dist/` to a static host and configure unknown page routes to serve `index.html`. Audio begins after the visitor enters the site, subject to browser autoplay settings.
+
+
+## Updated profile and activity tracker
+
+See `CAMBIOS_Y_CONFIGURACION.md` for this version. The bot source is supplied separately as `warcxs-bot.zip`. Deploy the project root on Vercel to include `api/` and `lib/`; hosting only `dist/` does not run the activity endpoints.
