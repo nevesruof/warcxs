@@ -5,7 +5,7 @@ import { loadAvatar3d } from './roblox-avatar.js';
 
 const MUSIC_CACHE = 'statsfm-recent-v2';
 const SNAPSHOT_CACHE = 'cheatinformer-site-snapshot';
-const ROBLOX_CACHE = 'warcxs:last-roblox-game';
+const ROBLOX_CACHE = 'warcxs:last-roblox-game:zahidtql12';
 const statsfm = createStatsfm(nativeFetch);
 let data;
 let history;

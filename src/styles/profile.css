@@ -178,9 +178,9 @@ html {
 }
 
 .global-volume-root {
-  top: 20px;
-  left: max(16px, calc((100vw - 1600px) / 2));
-  right: auto;
+  top: max(20px, env(safe-area-inset-top));
+  left: auto;
+  right: max(16px, env(safe-area-inset-right), calc((100vw - 1600px) / 2));
   bottom: auto;
 }
 .global-volume-container {
@@ -189,6 +189,9 @@ html {
 }
 .global-volume-toggle {
   color: #d8dbe0;
+}
+.performance-toast {
+  top: max(76px, calc(env(safe-area-inset-top) + 60px));
 }
 .now-playing-dock .spotify-now-playing {
   transition:
@@ -293,8 +296,8 @@ html {
 }
 @media (max-width: 640px) {
   .global-volume-root {
-    top: 12px;
-    left: 12px;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
   }
   .embedded-player {
     right: 16px;

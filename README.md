@@ -19,7 +19,7 @@ npm run build
 - La música local (`public/assets/entry-music.mp3`) se inicia tras entrar a la página y comparte el control de volumen. Cuando hay una reproducción remota disponible, se reemplaza y vuelve automáticamente al audio local al terminar.
 - Las letras proceden de LRCLIB. Las líneas LRC se resaltan según el segundo de reproducción; si no existen, se muestran las letras simples disponibles.
 - La reproducción de una pista usa YouTube dentro de la página cuando `YOUTUBE_API_KEY` está configurada. Si no lo está, las pistas elegidas manualmente se abren en el reproductor embebido de Spotify.
-- Roblox consulta el usuario `zahidtql`, su avatar y el juego actual. Sin una cookie válida, el perfil conserva el último juego obtenido por el bot.
+- Roblox consulta el usuario `zahidtql12` y su juego actual. Si la presencia no está disponible, intenta usar el último juego obtenido por el bot.
 - Las actividades de Discord muestran la imagen del juego cuando Discord proporciona un asset o una URL pública.
 
 ## Variables de entorno
@@ -28,7 +28,7 @@ Parte de `.env.example` y configura las variables en Vercel o en tu entorno de s
 
 | Variable | Uso |
 | --- | --- |
-| `ACTIVITY_BOT_URL` | URL del bot de presencia e historial. |
+| `ACTIVITY_BOT_URL` | Opcional: reemplaza la URL del bot existente. Sin esta variable se conserva la conexión anterior. |
 | `ACTIVITY_BOT_TOKEN` | Token opcional para ese bot. |
 | `YOUTUBE_API_KEY` | Habilita audio sincronizado dentro de la página. |
 | `ROBLOX_COOKIE` | Cookie `.ROBLOSECURITY` que permite consultar presencia de Roblox. |
