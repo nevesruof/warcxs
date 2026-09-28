@@ -2,6 +2,7 @@ import { createStatsfm, STATSFM_USER } from './statsfm.js';
 import { createActivityHistory } from './activity-history.js';
 import { nativeFetch, requestJson, readStored, storeValue } from './request.js';
 import { loadAvatar3d } from './roblox-avatar.js';
+import { updateAudioPresence } from './audio.js';
 
 const MUSIC_CACHE = 'statsfm-recent-v2';
 const SNAPSHOT_CACHE = 'cheatinformer-site-snapshot';
@@ -13,6 +14,27 @@ let listeningRequest;
 let listeningChecked = 0;
 let robloxChecked = 0;
 let robloxRequest;
+let presenceRequest;
+let presenceChecked = 0;
+
+function refreshPresence() {
+  if (presenceRequest) return presenceRequest;
+  if (Date.now() - presenceChecked < 4000) return Promise.resolve(data.snapshot.presence);
+  presenceRequest = requestJson('/api/presence')
+    .catch(offlinePresence)
+    .then((presence) => {
+      data.snapshot.presence = presence;
+      data.snapshot.updatedAt.presence = Date.now();
+      presenceChecked = Date.now();
+      updateAudioPresence(presence.data);
+      publishSnapshot();
+      return presence;
+    })
+    .finally(() => {
+      presenceRequest = null;
+    });
+  return presenceRequest;
+}
 
 function publishSnapshot() {
   storeValue(SNAPSHOT_CACHE, data.snapshot);
@@ -98,10 +120,7 @@ function offlinePresence() {
 
 const routes = {
   getSiteSnapshot: () => data.snapshot,
-  async getLanyardPresence() {
-    data.snapshot.presence = await requestJson('/api/presence').catch(offlinePresence);
-    return data.snapshot.presence;
-  },
+  getLanyardPresence: refreshPresence,
   recentActivity: async () => (await history.refresh()).recentActivities,
   recentSongs: () => refreshListening(),
   getDiscordGameActivity: () => history.refresh(),
@@ -138,6 +157,7 @@ export async function profileFetch(input, options) {
 export async function initializeProfile() {
   data = await requestJson('/data/profile.json');
   data.snapshot.presence = offlinePresence();
+  void refreshPresence();
   const music = readStored(MUSIC_CACHE);
   data.snapshot.recentSongs =
     music?.user === STATSFM_USER && Array.isArray(music.songs) ? music.songs.slice(0, 20) : [];
@@ -170,5 +190,7 @@ export async function initializeProfile() {
   const timer = setInterval(refresh, 15000);
   document.addEventListener('visibilitychange', refresh);
   window.addEventListener('online', refresh);
-  window.addEventListener('pagehide', () => clearInterval(timer), { once: true });
+  window.addEventListener('pagehide', () => clearInterval(timer), {
+    once: true,
+  });
 }

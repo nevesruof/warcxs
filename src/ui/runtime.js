@@ -17104,7 +17104,6 @@ var Zf = () =>
         isAudioDisabled: r,
         disableAudioForever: i,
       } = useAudio(),
-      a = (0, y.useRef)(!1),
       o = (0, y.useMemo)(() => Xf(Gf()?.profile), []),
       s = Zf() && !n && !r;
     return (0, K.jsx)(_d.main, {
@@ -17121,9 +17120,6 @@ var Zf = () =>
       transition: {
         duration: 0.28,
         ease: `easeOut`,
-      },
-      onPointerDown: () => {
-        r || a.current || (a.current = t());
       },
       onClick: () => {
         t();
@@ -17164,6 +17160,7 @@ var Zf = () =>
                 }));
             },
             onPointerDown: (e) => e.stopPropagation(),
+            onKeyDown: (e) => e.stopPropagation(),
             children: `Click to enter without audio`,
           }),
         ],
@@ -17720,7 +17717,7 @@ function bw() {
   let { hostname: e } = window.location;
   e !== `localhost` &&
     e !== `127.0.0.1` &&
-    (yw(`icon`, vw, `image/png`), yw(`apple-touch-icon`, vw, `image/png`));
+    (yw(`icon`, vw, `image/jpeg`), yw(`apple-touch-icon`, vw, `image/jpeg`));
 }
 async function mountApp() {
   (bw(),

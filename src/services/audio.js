@@ -24,7 +24,6 @@ let playerReady;
 let generation = 0;
 let progressTimer;
 let spotifyResume;
-let playerPanel;
 let lastVolume = state.volume || 30;
 let localBlocked = false;
 let youtubeBlocked = false;
@@ -34,6 +33,36 @@ let engineHost;
 let embedPanel;
 let candidates = [];
 let autoplayWatch;
+
+let presenceKnown = false;
+let ownerSpotify = null;
+const trackRequests = new Map();
+
+function resolveTrack(track, artist) {
+  const query = new URLSearchParams({ track, artist }).toString();
+  if (!trackRequests.has(query)) {
+    if (trackRequests.size >= 20) trackRequests.delete(trackRequests.keys().next().value);
+    const request = requestJson(`/api/playback?${query}`).catch((error) => {
+      trackRequests.delete(query);
+      throw error;
+    });
+    trackRequests.set(query, request);
+  }
+  return trackRequests.get(query);
+}
+
+export function updateAudioPresence(presence) {
+  presenceKnown = true;
+  const spotify = presence?.listening_to_spotify ? presence.spotify : null;
+  ownerSpotify = spotify?.timestamps?.end > Date.now() ? spotify : null;
+  if (ownerSpotify) {
+    localAudio?.pause();
+    if (!state.isAudioDisabled)
+      void resolveTrack(ownerSpotify.song, ownerSpotify.artist).catch(() => {});
+  } else {
+    resumeLocal();
+  }
+}
 
 function publish(patch) {
   state = { ...state, ...patch };
@@ -70,7 +99,8 @@ function attachGain() {
 
 function applyLocalLevel() {
   const level = state.isAudioDisabled ? 0 : state.volume / 100;
-  const audio = getLocalAudio();
+  const audio = localAudio;
+  if (!audio) return;
   if (localGain) localGain.gain.value = level;
   else audio.volume = level;
   audio.muted = level === 0;
@@ -90,9 +120,25 @@ function applyPlayerLevel() {
   }
 }
 
+function setLocalMetadata() {
+  if (!navigator.mediaSession || !window.MediaMetadata) return;
+  navigator.mediaSession.metadata = new window.MediaMetadata({
+    title: 'cheatinformer',
+    artist: 'iTake',
+    artwork: [
+      {
+        src: new URL('/assets/itake-avatar.jpeg', location.origin).href,
+        type: 'image/jpeg',
+      },
+    ],
+  });
+}
+
 function resumeLocal() {
   if (
     !entered ||
+    !presenceKnown ||
+    ownerSpotify ||
     state.isAudioDisabled ||
     state.volume === 0 ||
     state.isClipPlaying ||
@@ -100,6 +146,7 @@ function resumeLocal() {
     state.playbackSource !== 'none'
   )
     return;
+  setLocalMetadata();
   audioContext?.resume?.().catch(() => {});
   getLocalAudio()
     .play()
@@ -198,6 +245,7 @@ async function ensurePlayer() {
     .then(
       (YT) =>
         new Promise((resolve, reject) => {
+          if (state.isAudioDisabled) return reject(new Error('Audio disabled'));
           mountEngine();
           const timer = setTimeout(() => reject(new Error('Player unavailable')), 10000);
           player = new YT.Player('audio-engine-player', {
@@ -289,6 +337,7 @@ function videoId(value) {
 async function playVideo(value, startTime = 0, source = 'manual', { keepCandidates = false } = {}) {
   const id = videoId(value);
   if (!id || state.isAudioDisabled || state.volume === 0 || !entered) return false;
+  localAudio?.pause();
   if (!keepCandidates) candidates = [];
   const request = ++generation;
   const requestedAt = Date.now();
@@ -330,6 +379,7 @@ function openSpotifyEmbed(url) {
   frame.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
   frame.height = '152';
   frame.width = '100%';
+  frame.setAttribute('allowtransparency', 'true');
   panel.querySelector('#embedded-player-content').replaceWith(frame);
   getLocalAudio().pause();
   publish({ playbackSource: 'manual', isAudioPlaying: false, activeVideoId: null });
@@ -338,10 +388,11 @@ function openSpotifyEmbed(url) {
 
 async function playTrack(track, artist, startTime = 0, source = 'spotify') {
   if (state.isAudioDisabled || state.volume === 0 || !entered) return false;
+  localAudio?.pause();
   const request = ++generation;
   const requestedAt = Date.now();
   try {
-    const result = await requestJson(`/api/playback?${new URLSearchParams({ track, artist })}`);
+    const result = await resolveTrack(track, artist);
     if (request !== generation) return false;
     const ids = [...new Set([result.videoId, ...(result.videoIds || [])].filter(Boolean))];
     if (ids.length) {
@@ -399,6 +450,7 @@ const actions = {
   primePlayer() {
     if (state.isAudioDisabled) return false;
     entered = true;
+    getLocalAudio();
     attachGain();
     applyLocalLevel();
     resumeLocal();
@@ -411,6 +463,8 @@ const actions = {
   // "Enter without audio": nothing may sound, from any source, and the volume control disappears.
   disableAudioForever() {
     entered = true;
+    localBlocked = false;
+    spotifyResume = null;
     generation++;
     candidates = [];
     clearTimeout(autoplayWatch);
@@ -433,7 +487,9 @@ const actions = {
     }
     mediaElements.forEach((_base, element) => {
       element.muted = true;
+      element.pause();
     });
+    if (navigator.mediaSession) navigator.mediaSession.metadata = null;
   },
   updateTime(seconds) {
     if (
@@ -469,6 +525,7 @@ const actions = {
   },
   resumeAfterExternalMedia() {
     publish({ isPlaybackInterrupted: false });
+    if (state.isAudioDisabled) return;
     if (state.playbackSource !== 'none') player?.playVideo?.();
     else resumeLocal();
   },

@@ -8620,7 +8620,7 @@ var SongSearch = () => {
         }),
         c.trim()
           ? v.length > 0
-            ? (0, jsxRuntime.jsx)(a.div, {
+            ? (0, jsxRuntime.jsx)(motion.div, {
                 layout: true,
                 initial: {
                   opacity: 0,
@@ -9007,8 +9007,13 @@ var NowPlayingDock = ({ spotify: e }) => {
                     duration: 0.28,
                     ease: [0.22, 1, 0.36, 1],
                   },
-                  onMouseEnter: () => x(!0),
-                  onMouseLeave: () => x(!1),
+                  onMouseEnter: () => {
+                    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) x(!0);
+                  },
+                  onMouseLeave: (event) => {
+                    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+                        !event.currentTarget.contains(document.activeElement)) x(!1);
+                  },
                   children: [
                     (0, jsxRuntime.jsx)(motion.button, {
                       layout: `position`,

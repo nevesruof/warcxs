@@ -13,6 +13,30 @@
   overflow-x: clip;
 }
 
+/* Keep mobile sections in document flow, including the full contribution graph. */
+@media (max-width: 1099px) {
+  .profile-page--bento {
+    min-height: 100svh;
+  }
+  .bento-cell,
+  .recent-stack,
+  .recent-stack .bento-cell--github {
+    overflow: visible;
+    max-height: none;
+  }
+  .recent-stack,
+  .live-rail {
+    height: auto;
+  }
+  .recent-stack > .surface-panel {
+    flex: none;
+  }
+  .recent-stack > .surface-panel > .overflow-y-auto {
+    max-height: 18rem;
+    flex: none;
+  }
+}
+
 /* Separate, aligned tag and badge capsules from the supplied profile reference. */
 .profile-identity-row {
   display: flex;
@@ -268,6 +292,9 @@ html {
 .embedded-player iframe {
   display: block;
   border: 0;
+  border-radius: 12px;
+  background: #101114;
+  color-scheme: normal;
   max-width: 100%;
 }
 .embedded-player__close {

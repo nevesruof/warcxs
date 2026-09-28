@@ -11,6 +11,10 @@ globalThis.localStorage = {
 globalThis.fetch = async () => new Response(JSON.stringify(playbackReply));
 globalThis.location = { origin: 'https://example.test' };
 globalThis.window = globalThis;
+Object.defineProperty(globalThis, 'navigator', { value: { mediaSession: {} }, configurable: true });
+globalThis.MediaMetadata = class {
+  constructor(value) { Object.assign(this, value); }
+};
 
 const audios = [];
 class FakeAudio {
@@ -102,7 +106,7 @@ class FakePlayer {
 globalThis.YT = { Player: FakePlayer, PlayerState: { PLAYING: 1, ENDED: 0 } };
 
 let scenario = 0;
-async function freshAudio({ webAudio = false } = {}) {
+async function freshAudio({ webAudio = false, presenceKnown = true } = {}) {
   scenario++;
   audios.length = 0;
   FakePlayer.instances.length = 0;
@@ -122,7 +126,8 @@ async function freshAudio({ webAudio = false } = {}) {
   delete globalThis.YT;
   globalThis.YT = { Player: FakePlayer, PlayerState: { PLAYING: 1, ENDED: 0 } };
   globalThis.onYouTubeIframeAPIReady = undefined;
-  const { createAudioComponents } = await import(`../src/services/audio.js?case=${scenario}`);
+  const { createAudioComponents, updateAudioPresence } = await import(`../src/services/audio.js?case=${scenario}`);
+  if (presenceKnown) updateAudioPresence({ listening_to_spotify: false });
   const React = {
     createContext: () => ({ Provider: 'provider' }),
     useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
@@ -130,7 +135,9 @@ async function freshAudio({ webAudio = false } = {}) {
     useContext: () => null,
   };
   const { AudioProvider } = createAudioComponents(React, (_type, props) => props);
-  return () => AudioProvider({ children: null }).value;
+  const audio = () => AudioProvider({ children: null }).value;
+  audio.updatePresence = updateAudioPresence;
+  return audio;
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
@@ -175,6 +182,25 @@ test('volume 0 silences the local track and blocks streaming; raising it resumes
   assert.equal(local.paused, false);
   assert.equal(local.muted, false);
   assert.equal(local.volume, 0.4);
+  assert.match(navigator.mediaSession.metadata.artwork[0].src, /itake-avatar\.jpeg$/);
+});
+
+test('entry waits for presence and keeps local audio paused throughout Spotify startup', async () => {
+  const audio = await freshAudio({ presenceKnown: false });
+  audio().primePlayer();
+  const [local] = audios;
+  assert.equal(local.plays, 0);
+  audio.updatePresence({
+    listening_to_spotify: true,
+    spotify: { song: 'Song', artist: 'Artist', timestamps: { end: Date.now() + 60000 } },
+  });
+  audio().setVolume(70);
+  audio().resumeAfterExternalMedia();
+  await settle();
+  assert.equal(local.plays, 0);
+  audio.updatePresence({ listening_to_spotify: false });
+  assert.equal(local.paused, false);
+  audio().disableAudioForever();
 });
 
 test('gain node carries the level where element.volume is ignored (iOS)', async () => {
