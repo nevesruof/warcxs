@@ -1,0 +1,311 @@
+/* Preserve the reference layout; improve keyboard access and GPU fallbacks. */
+:focus-visible {
+  outline: 2px solid #b2b2b8;
+  outline-offset: 4px;
+}
+.roblox-avatar-card__fallback p {
+  display: none;
+}
+.roblox-avatar-card__fallback img {
+  object-fit: contain;
+}
+.profile-page {
+  overflow-x: clip;
+}
+
+/* Separate, aligned tag and badge capsules from the supplied profile reference. */
+.profile-identity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.profile-identity-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.profile-clan-pill,
+.profile-badges-pill {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+}
+.profile-clan-pill {
+  gap: 4px;
+  min-width: 56px;
+  padding: 0 8px;
+  color: #f2f3f5;
+  font:
+    400 14px/1.2 Inter,
+    sans-serif;
+  letter-spacing: -0.35px;
+  cursor: default;
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.25s ease;
+}
+.profile-clan-pill:hover,
+.profile-clan-pill:focus-visible {
+  transform: translateY(-2px);
+  background: #ffffff08;
+}
+.profile-clan-icon {
+  display: block;
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  image-rendering: auto;
+}
+.profile-badges-pill {
+  gap: 4px;
+  padding: 0 6px;
+}
+.profile-badge-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.25s ease;
+}
+.profile-badge-item:hover,
+.profile-badge-item:focus-visible {
+  transform: translateY(-3px) scale(1.08);
+  filter: brightness(1.15);
+}
+.profile-badge-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  filter: none;
+}
+.profile-badge-item[aria-label='Server Booster'] .profile-badge-icon {
+  width: 21px;
+  height: 21px;
+  max-width: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Scroll within the existing profile card, including touch and keyboard. */
+.bento-cell--profile > .profile-scroll-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff26 transparent;
+}
+.profile-scroll-panel:focus-visible {
+  outline: 1px solid #ffffff99;
+  outline-offset: 2px;
+}
+.profile-bio-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: #fff;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.profile-bio-link:hover {
+  color: #fff;
+}
+.profile-bio-link:focus-visible {
+  outline: 1px solid white;
+  outline-offset: 3px;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-color: #ffffff26 transparent;
+  scrollbar-width: thin;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff26 transparent;
+}
+*::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: #ffffff26;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #ffffff40;
+}
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.profile-scroll-panel,
+.music-carousel,
+.music-grid-modal__grid,
+.dock-song-search__results {
+  scroll-behavior: smooth;
+}
+
+.global-volume-root {
+  top: 20px;
+  left: max(16px, calc((100vw - 1600px) / 2));
+  right: auto;
+  bottom: auto;
+}
+.global-volume-container {
+  background: #111318e6;
+  border: 1px solid #ffffff0a;
+}
+.global-volume-toggle {
+  color: #d8dbe0;
+}
+.now-playing-dock .spotify-now-playing {
+  transition:
+    opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    translate 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.32s ease,
+    visibility 0.32s;
+  filter: blur(6px);
+}
+.now-playing-dock.is-open .spotify-now-playing {
+  filter: blur(0);
+}
+.now-playing-dock__tab-icon {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dock-song-search__results {
+  overscroll-behavior: contain;
+}
+
+.music-category-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.music-category-tabs button {
+  padding: 8px 15px;
+  color: #8d9198;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  transition:
+    color 0.2s,
+    background 0.2s,
+    border-color 0.2s;
+}
+.music-category-tabs button:hover {
+  color: #e9edf2;
+  background: #ffffff05;
+}
+.music-category-tabs button[aria-pressed='true'] {
+  color: #f1f3f6;
+  background: #ffffff08;
+  border-color: #ffffff0b;
+}
+.music-rankings {
+  min-width: 0;
+}
+.music-rankings > div {
+  min-height: 230px;
+}
+.music-empty-line {
+  padding: 20px;
+  color: #949aa3;
+  font-size: 13px;
+}
+
+.embedded-player {
+  position: fixed;
+  z-index: 140;
+  right: 20px;
+  bottom: 20px;
+  width: 356px;
+  max-width: calc(100vw - 32px);
+  padding-top: 28px;
+  border-radius: 14px;
+  background: #101114;
+  border: 1px solid #ffffff12;
+  box-shadow: 0 18px 70px #0008;
+  overflow: hidden;
+  animation: player-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.embedded-player iframe {
+  display: block;
+  border: 0;
+  max-width: 100%;
+}
+.embedded-player__close {
+  position: absolute;
+  top: 0;
+  right: 5px;
+  width: 28px;
+  height: 28px;
+  color: #bfc5cc;
+  background: transparent;
+  border: 0;
+  font-size: 21px;
+  cursor: pointer;
+}
+@keyframes player-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+@media (max-width: 640px) {
+  .global-volume-root {
+    top: 12px;
+    left: 12px;
+  }
+  .embedded-player {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

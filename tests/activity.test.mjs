@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {historyPayload,presencePayload} from '../lib/activity.js';
-import {createActivityHistory} from '../dist/activity-history.js';
+import {createActivityHistory} from '../src/services/activity-history.js';
 import handler from '../api/game-activity.js';
 const now=Date.now();
 const fixture={discordUserId:'1239908273885286546',discord:{status:'dnd',connected:true,updatedAt:now/1000,

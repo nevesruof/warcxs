@@ -1,4 +1,4 @@
-import {readBot, presencePayload} from '../lib/activity.js';
+import { readBot, presencePayload } from '../lib/activity.js';
 const STATIC_DISCORD_USER = {
   avatar: '/assets/itake-avatar.jpeg',
   avatar_decoration_data: { asset: 'a_1005898c6acf56a9ac5010baf444f6fd', expires_at: null },
@@ -35,9 +35,12 @@ const STATIC_DISCORD_USER = {
   banner: '/assets/katana-banner.png',
 };
 
-export default async function handler(req,res) {
-  res.setHeader('Cache-Control','no-store');
-  if(req.method && req.method!=='GET')return res.status(405).json({success:false});
-  try {return res.status(200).json(presencePayload(await readBot(), STATIC_DISCORD_USER));}
-  catch {return res.status(503).json({success:false,error:'Activity bot temporarily unavailable'});}
+export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method && req.method !== 'GET') return res.status(405).json({ success: false });
+  try {
+    return res.status(200).json(presencePayload(await readBot(), STATIC_DISCORD_USER));
+  } catch {
+    return res.status(503).json({ success: false, error: 'Activity bot temporarily unavailable' });
+  }
 }

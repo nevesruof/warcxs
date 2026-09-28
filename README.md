@@ -1,48 +1,40 @@
-# iTake — cheatinformer
+# wArcxs
 
-A personal site with the supplied reference layout, customized profile imagery, and public listening history.
+Perfil personal con presencia de Discord, actividad de Roblox, estadísticas de stats.fm y reproducción dentro de la página. El código fuente está separado de la salida de producción: `src/` contiene la interfaz, `api/` las funciones y `lib/` la lógica compartida.
 
-## Run
+## Desarrollo
 
 ```sh
 npm ci
 npm run dev
+npm test
+npm run build
 ```
 
-The publishable website is in `dist/`; it can also be served by any static web server. `npm run build` verifies the authored static output, JavaScript syntax, and local assets.
+`npm run build` crea `dist/` y comprueba los recursos locales y la sintaxis. `dist/` es generado y no se versiona.
 
-## Content
+## Integraciones
 
-- `dist/data/profile.json`: editable profile, connections, activity, tracks, statistics and asset paths.
-- `dist/app.js`: local data adapter and dialog keyboard support.
-- `dist/adaptation.css`: accessibility and fallback adjustments.
-- `dist/assets/`: public reference client styles/components and local image assets. React, motion and renderer code are bundled in the reference client.
+- stats.fm obtiene pistas, artistas y listening clock reales. Los álbumes se solicitan únicamente al abrir su pestaña y usan `orderBy`.
+- La música local (`public/assets/entry-music.mp3`) se inicia tras entrar a la página y comparte el control de volumen. Cuando hay una reproducción remota disponible, se reemplaza y vuelve automáticamente al audio local al terminar.
+- Las letras proceden de LRCLIB. Las líneas LRC se resaltan según el segundo de reproducción; si no existen, se muestran las letras simples disponibles.
+- La reproducción de una pista usa YouTube dentro de la página cuando `YOUTUBE_API_KEY` está configurada. Si no lo está, las pistas elegidas manualmente se abren en el reproductor embebido de Spotify.
+- Roblox consulta el usuario `zahidtql`, su avatar y el juego actual. Sin una cookie válida, el perfil conserva el último juego obtenido por el bot.
+- Las actividades de Discord muestran la imagen del juego cuando Discord proporciona un asset o una URL pública.
 
-The reference's layout, breakpoints, entry animation, animated name, mouse effects, floating dock, music carousel and modal layouts are retained. Profile imagery, game imagery, album art and the GitHub contribution snapshot are bundled locally.
+## Variables de entorno
 
-## Integration boundaries
+Parte de `.env.example` y configura las variables en Vercel o en tu entorno de servidor:
 
-The private original APIs and profile socket are not contacted. View count retains the reference snapshot. Presence and activity history come from the personal bot through the server routes in api/. See CAMBIOS_Y_CONFIGURACION.md for configuration; the bot is delivered separately. Music comes from the public wArcxs stats.fm profile, with the latest 20 listens and public rankings. Recent listening starts fetching before the interface loads and refreshes every 30 seconds while visible, when returning to the tab, and on reconnect. Only successfully fetched stats.fm history is persisted; the bundled song list is never used at startup. Statistics that are not shared by stats.fm remain unavailable.
+| Variable | Uso |
+| --- | --- |
+| `ACTIVITY_BOT_URL` | URL del bot de presencia e historial. |
+| `ACTIVITY_BOT_TOKEN` | Token opcional para ese bot. |
+| `YOUTUBE_API_KEY` | Habilita audio sincronizado dentro de la página. |
+| `ROBLOX_COOKIE` | Cookie `.ROBLOSECURITY` que permite consultar presencia de Roblox. |
 
-The Roblox card shows an interactive 3D model when `avatar3d` in `dist/data/profile.json` lists the model files (`obj`, `mtl` and `textures` are Roblox CDN hashes, plus `targetId`). `dist/app.js` downloads them once in the browser from `*.rbxcdn.com`, so that CDN must allow cross-origin requests; if it does not, or the files are gone, the card shows the flat image from `robloxProfile.avatarUrl` instead. To refresh the model after an avatar change, open `https://thumbnails.roblox.com/v1/users/avatar-3d?userId=<id>`, then open its `imageUrl`, and copy the new `obj`, `mtl` and `textures` values into `avatar3d`. The original Roblox 3D endpoint itself requires authorization, so it is not contacted.
+Nunca expongas estas variables en el navegador ni las subas al repositorio.
 
-The five social links point to the owner's Discord, Telegram, Spotify, GitHub and email. The profile uses the supplied avatar and katana banner, the animated Spirit Embers decoration, and the retained imnotreadingal.lat connection. Listening cards open the corresponding Spotify track. The entry audio is the supplied Копы.mp3, hosted locally as `dist/assets/entry-music.mp3`. This project does not collect credentials or send messages.
+## Despliegue
 
-The original client assets were retrieved from the public site for this requested recreation. The supplied recording was used for reference and is not included in the hosted output.
-
-## Badges and server tag
-
-- Profile badges live in `snapshot.profile.badges` in `dist/data/profile.json`. Each entry has an `icon` (`/assets/...`) and a `description`, which is the text shown when the badge is hovered or tapped. Removing an entry removes its icon and its text.
-- Active badges use `discord-nitro-bronze.png`, `discord-server-booster.svg` and `discord-quest.png`.
-- The server tag text is `tag` (currently `FM`) in `profile.json`; the skull icon is `dist/assets/clan-skull.svg`. The compact pill styling is in `dist/adaptation.css`; the tag markup is in `dist/assets/MainProfile-*.js`.
-
-## Source structure and deployment
-
-This is a static site. The React interface and styles are included as bundled JavaScript and CSS in `dist/assets/`; the original unbundled JSX/TSX files are not part of this project. Profile data and the data adapters remain editable in `dist/data/profile.json`, `dist/app.js` and `dist/statsfm.js`.
-
-Use `npm ci` and `npm run dev` for local development. Run `npm run build` to validate the files. Deploy the contents of `dist/` to a static host and configure unknown page routes to serve `index.html`. Audio begins after the visitor enters the site, subject to browser autoplay settings.
-
-
-## Updated profile and activity tracker
-
-See `CAMBIOS_Y_CONFIGURACION.md` for this version. The bot source is supplied separately as `warcxs-bot.zip`. Deploy the project root on Vercel to include `api/` and `lib/`; hosting only `dist/` does not run the activity endpoints.
+Despliega la raíz del repositorio en Vercel. `vercel.json` ejecuta el build, publica `dist/` y mantiene las rutas `api/` sin caché. Los datos de perfil y los recursos locales viven en `public/`; se copian a `dist/` durante el build.
