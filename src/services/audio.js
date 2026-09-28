@@ -27,6 +27,13 @@ let spotifyResume;
 let playerPanel;
 let lastVolume = state.volume || 30;
 let localBlocked = false;
+let youtubeBlocked = false;
+let audioContext;
+let localGain;
+let engineHost;
+let embedPanel;
+let candidates = [];
+let autoplayWatch;
 
 function publish(patch) {
   state = { ...state, ...patch };
@@ -43,15 +50,57 @@ function getLocalAudio() {
   return localAudio;
 }
 
+// iOS ignores HTMLMediaElement.volume, so the level is applied through a GainNode.
+// The graph is only created during a user gesture so the context can actually start.
+function attachGain() {
+  if (localGain || state.isAudioDisabled) return;
+  try {
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!Context) return;
+    audioContext = new Context();
+    const source = audioContext.createMediaElementSource(getLocalAudio());
+    localGain = audioContext.createGain();
+    localGain.gain.value = state.volume / 100;
+    source.connect(localGain).connect(audioContext.destination);
+    getLocalAudio().volume = 1;
+  } catch {
+    localGain = null;
+  }
+}
+
+function applyLocalLevel() {
+  const level = state.isAudioDisabled ? 0 : state.volume / 100;
+  const audio = getLocalAudio();
+  if (localGain) localGain.gain.value = level;
+  else audio.volume = level;
+  audio.muted = level === 0;
+  if (level === 0) audio.pause();
+}
+
+function applyPlayerLevel() {
+  if (!player) return;
+  try {
+    if (state.isAudioDisabled || state.volume === 0) player.mute?.();
+    else {
+      player.unMute?.();
+      player.setVolume?.(state.volume);
+    }
+  } catch {
+    /* The player may still be loading. */
+  }
+}
+
 function resumeLocal() {
   if (
     !entered ||
     state.isAudioDisabled ||
+    state.volume === 0 ||
     state.isClipPlaying ||
     state.isPlaybackInterrupted ||
     state.playbackSource !== 'none'
   )
     return;
+  audioContext?.resume?.().catch(() => {});
   getLocalAudio()
     .play()
     .then(() => {
@@ -63,30 +112,26 @@ function resumeLocal() {
 }
 
 function setVolume(value) {
+  if (state.isAudioDisabled) return;
   const volume = clamp(value);
   if (volume) lastVolume = volume;
-  publish({ volume, isAudioDisabled: false });
+  publish({ volume });
   storeValue('site-global-volume', volume);
-  getLocalAudio().volume = volume / 100;
-  player?.setVolume?.(volume);
+  applyLocalLevel();
+  applyPlayerLevel();
   mediaElements.forEach((base, element) => {
     element.volume = (base * volume) / 100;
   });
-  resumeLocal();
+  if (volume) resumeLocal();
 }
 
-function removePanel() {
-  clearInterval(progressTimer);
-  player?.destroy?.();
-  player = null;
-  playerReady = null;
-  playerPanel?.remove();
-  playerPanel = null;
+function removeEmbed() {
+  embedPanel?.remove();
+  embedPanel = null;
 }
 
-function mountPanel(title) {
-  if (playerPanel?.querySelector('#embedded-player-content')) return playerPanel;
-  if (playerPanel) removePanel();
+function mountEmbed(title) {
+  removeEmbed();
   const panel = document.createElement('aside');
   panel.className = 'embedded-player';
   panel.setAttribute('aria-label', title);
@@ -100,8 +145,21 @@ function mountPanel(title) {
   content.id = 'embedded-player-content';
   panel.append(close, content);
   document.body.append(panel);
-  playerPanel = panel;
+  embedPanel = panel;
   return panel;
+}
+
+// Off-screen (not display:none, which browsers throttle) 200x200 host for the audio-only YouTube engine.
+function mountEngine() {
+  if (engineHost?.isConnected) return engineHost;
+  engineHost = document.createElement('div');
+  engineHost.className = 'audio-engine';
+  engineHost.setAttribute('aria-hidden', 'true');
+  const target = document.createElement('div');
+  target.id = 'audio-engine-player';
+  engineHost.append(target);
+  document.body.append(engineHost);
+  return engineHost;
 }
 
 let youtubeScript;
@@ -129,6 +187,7 @@ function loadYouTube() {
 }
 
 function resumeOnFailure() {
+  clearTimeout(autoplayWatch);
   publish({ isAudioPlaying: false, playbackSource: 'none', activeVideoId: null });
   resumeLocal();
 }
@@ -139,30 +198,45 @@ async function ensurePlayer() {
     .then(
       (YT) =>
         new Promise((resolve, reject) => {
-          mountPanel('Music player');
+          mountEngine();
           const timer = setTimeout(() => reject(new Error('Player unavailable')), 10000);
-          player = new YT.Player('embedded-player-content', {
-            width: '356',
+          player = new YT.Player('audio-engine-player', {
+            width: '200',
             height: '200',
-            playerVars: { controls: 1, playsinline: 1, origin: location.origin, rel: 0 },
+            playerVars: {
+              controls: 0,
+              disablekb: 1,
+              fs: 0,
+              iv_load_policy: 3,
+              modestbranding: 1,
+              playsinline: 1,
+              origin: location.origin,
+              rel: 0,
+            },
             events: {
               onReady: () => {
                 clearTimeout(timer);
-                player.setVolume(state.volume);
+                applyPlayerLevel();
                 resolve(player);
               },
               onStateChange: (event) => {
                 const playing = event.data === YT.PlayerState.PLAYING;
-                if (playing) getLocalAudio().pause();
+                if (playing) {
+                  clearTimeout(autoplayWatch);
+                  youtubeBlocked = false;
+                  getLocalAudio().pause();
+                }
                 publish({ isAudioPlaying: playing });
                 if (event.data === YT.PlayerState.ENDED)
                   stopPlayback({ resumeSpotify: state.playbackSource === 'manual' });
               },
-              onAutoplayBlocked: resumeOnFailure,
+              onAutoplayBlocked: () => {
+                youtubeBlocked = true;
+              },
               onError: () => {
                 clearTimeout(timer);
                 reject(new Error('Video cannot be embedded'));
-                resumeOnFailure();
+                tryNextCandidate();
               },
             },
           });
@@ -173,6 +247,30 @@ async function ensurePlayer() {
       throw error;
     });
   return playerReady;
+}
+
+// Official-audio uploads are often not embeddable: fall through to the next search result.
+function tryNextCandidate() {
+  const next = candidates.shift();
+  if (next && !state.isAudioDisabled) {
+    const elapsed = next.source === 'spotify' ? (Date.now() - next.at) / 1000 : 0;
+    void playVideo(next.id, next.offset + elapsed, next.source, { keepCandidates: true });
+  } else resumeOnFailure();
+}
+
+function watchAutoplay(request) {
+  clearTimeout(autoplayWatch);
+  autoplayWatch = setTimeout(() => {
+    if (request === generation && !state.isAudioPlaying && state.playbackSource !== 'none')
+      youtubeBlocked = true;
+  }, 3000);
+}
+
+function retryYoutube() {
+  if (!youtubeBlocked || !player || state.isAudioDisabled) return;
+  youtubeBlocked = false;
+  applyPlayerLevel();
+  player.playVideo?.();
 }
 
 function videoId(value) {
@@ -188,11 +286,13 @@ function videoId(value) {
   return null;
 }
 
-async function playVideo(value, startTime = 0, source = 'manual') {
+async function playVideo(value, startTime = 0, source = 'manual', { keepCandidates = false } = {}) {
   const id = videoId(value);
-  if (!id || state.isAudioDisabled || !entered) return false;
+  if (!id || state.isAudioDisabled || state.volume === 0 || !entered) return false;
+  if (!keepCandidates) candidates = [];
   const request = ++generation;
   const requestedAt = Date.now();
+  removeEmbed();
   try {
     const yt = await ensurePlayer();
     if (request !== generation) return false;
@@ -201,7 +301,9 @@ async function playVideo(value, startTime = 0, source = 'manual') {
       startTime + (source === 'spotify' ? (Date.now() - requestedAt) / 1000 : 0),
     );
     publish({ playbackSource: source, activeVideoId: id, playbackTime: offset });
+    applyPlayerLevel();
     yt.loadVideoById({ videoId: id, startSeconds: offset });
+    watchAutoplay(request);
     clearInterval(progressTimer);
     progressTimer = setInterval(() => {
       if (!document.hidden && player)
@@ -212,16 +314,16 @@ async function playVideo(value, startTime = 0, source = 'manual') {
     }, 500);
     return true;
   } catch {
-    if (request === generation) resumeOnFailure();
+    if (request === generation) tryNextCandidate();
     return false;
   }
 }
 
 function openSpotifyEmbed(url) {
   const id = /open\.spotify\.com\/track\/([A-Za-z0-9]+)/.exec(url || '')?.[1];
-  if (!id) return false;
-  removePanel();
-  const panel = mountPanel('Spotify player');
+  if (!id || state.isAudioDisabled) return false;
+  player?.stopVideo?.();
+  const panel = mountEmbed('Spotify player');
   const frame = document.createElement('iframe');
   frame.src = `https://open.spotify.com/embed/track/${id}?utm_source=generator&theme=0`;
   frame.title = 'Spotify track player';
@@ -235,15 +337,17 @@ function openSpotifyEmbed(url) {
 }
 
 async function playTrack(track, artist, startTime = 0, source = 'spotify') {
-  if (state.isAudioDisabled || !entered) return false;
+  if (state.isAudioDisabled || state.volume === 0 || !entered) return false;
   const request = ++generation;
   const requestedAt = Date.now();
   try {
     const result = await requestJson(`/api/playback?${new URLSearchParams({ track, artist })}`);
     if (request !== generation) return false;
-    if (result.videoId) {
+    const ids = [...new Set([result.videoId, ...(result.videoIds || [])].filter(Boolean))];
+    if (ids.length) {
       const offset = startTime + (source === 'spotify' ? (Date.now() - requestedAt) / 1000 : 0);
-      return playVideo(result.videoId, offset, source);
+      candidates = ids.slice(1).map((id) => ({ id, offset, source, at: Date.now() }));
+      return playVideo(ids[0], offset, source, { keepCandidates: true });
     }
   } catch {
     if (request !== generation) return false;
@@ -255,7 +359,15 @@ async function playTrack(track, artist, startTime = 0, source = 'spotify') {
 
 function stopPlayback({ resumeSpotify = false } = {}) {
   generation++;
-  removePanel();
+  candidates = [];
+  clearTimeout(autoplayWatch);
+  clearInterval(progressTimer);
+  removeEmbed();
+  try {
+    player?.stopVideo?.();
+  } catch {
+    /* The engine stays alive so the next track starts instantly. */
+  }
   publish({
     playbackSource: 'none',
     activeVideoId: null,
@@ -263,7 +375,7 @@ function stopPlayback({ resumeSpotify = false } = {}) {
     playbackTime: 0,
     playbackDuration: 0,
   });
-  if (resumeSpotify && spotifyResume) {
+  if (resumeSpotify && spotifyResume && !state.isAudioDisabled) {
     const request = spotifyResume;
     const offset = request.startTime + (Date.now() - request.at) / 1000;
     if (request.videoUrlOrId) void playVideo(request.videoUrlOrId, offset, 'spotify');
@@ -285,16 +397,43 @@ const actions = {
   setVolume,
   setManualPlaybackDetails,
   primePlayer() {
+    if (state.isAudioDisabled) return false;
     entered = true;
+    attachGain();
+    applyLocalLevel();
     resumeLocal();
+    void ensurePlayer().catch(() => {});
     return true;
   },
   toggleMute() {
     setVolume(state.volume ? 0 : lastVolume);
   },
+  // "Enter without audio": nothing may sound, from any source, and the volume control disappears.
   disableAudioForever() {
     entered = true;
-    setVolume(0);
+    generation++;
+    candidates = [];
+    clearTimeout(autoplayWatch);
+    clearInterval(progressTimer);
+    removeEmbed();
+    publish({
+      isAudioDisabled: true,
+      isAudioPlaying: false,
+      playbackSource: 'none',
+      activeVideoId: null,
+      playbackTime: 0,
+      playbackDuration: 0,
+    });
+    applyLocalLevel();
+    try {
+      player?.stopVideo?.();
+      player?.mute?.();
+    } catch {
+      /* Nothing is playing yet. */
+    }
+    mediaElements.forEach((_base, element) => {
+      element.muted = true;
+    });
   },
   updateTime(seconds) {
     if (
@@ -326,6 +465,7 @@ const actions = {
     publish({ isPlaybackInterrupted: true });
     getLocalAudio().pause();
     player?.pauseVideo?.();
+    clearTimeout(autoplayWatch);
   },
   resumeAfterExternalMedia() {
     publish({ isPlaybackInterrupted: false });
@@ -335,6 +475,7 @@ const actions = {
   registerMediaElement(element, { baseVolume = 1 } = {}) {
     mediaElements.set(element, clamp(baseVolume, 1));
     element.volume = (clamp(baseVolume, 1) * state.volume) / 100;
+    element.muted = state.isAudioDisabled;
     return () => mediaElements.delete(element);
   },
 };
@@ -350,6 +491,7 @@ export function createAudioComponents(React, jsx) {
     React.useEffect(() => {
       const retry = () => {
         if (localBlocked) resumeLocal();
+        retryYoutube();
       };
       document.addEventListener('pointerdown', retry);
       document.addEventListener('keydown', retry);

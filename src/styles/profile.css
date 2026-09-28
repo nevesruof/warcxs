@@ -312,3 +312,15 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Audio-only YouTube engine: kept 200x200 and rendered, but off-screen and invisible. */
+.audio-engine {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 200px;
+  height: 200px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
