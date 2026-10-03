@@ -574,14 +574,12 @@ const actions = {
   },
 };
 
-export function createAudioComponents(React, jsx) {
-  const Context = React.createContext(null);
+export function createAudioComponents(React) {
   const subscribe = (listener) => {
     listeners.add(listener);
     return () => listeners.delete(listener);
   };
   function AudioProvider({ children }) {
-    const current = React.useSyncExternalStore(subscribe, () => state);
     React.useEffect(() => {
       document.addEventListener("click", retryYoutube);
       document.addEventListener("keydown", retryYoutube);
@@ -590,10 +588,34 @@ export function createAudioComponents(React, jsx) {
         document.removeEventListener("keydown", retryYoutube);
       };
     }, []);
-    return jsx(Context.Provider, {
-      value: { ...current, ...actions },
-      children,
-    });
+    return children;
   }
-  return { AudioProvider, useAudio: () => React.useContext(Context) };
+  function useAudio() {
+    const current = React.useSyncExternalStore(
+      subscribe,
+      () => state,
+      () => state,
+    );
+    return React.useMemo(() => ({ ...current, ...actions }), [current]);
+  }
+  function useAudioFields(fields) {
+    const selection = React.useRef({ fields, snapshot: null });
+    selection.current.fields = fields;
+    const getSnapshot = React.useCallback(() => {
+      const current = selection.current;
+      if (
+        !current.snapshot ||
+        current.fields.some(
+          (key) => !Object.is(current.snapshot[key], state[key]),
+        )
+      )
+        current.snapshot = {
+          ...actions,
+          ...Object.fromEntries(current.fields.map((key) => [key, state[key]])),
+        };
+      return current.snapshot;
+    }, []);
+    return React.useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  }
+  return { AudioProvider, useAudio, useAudioFields };
 }

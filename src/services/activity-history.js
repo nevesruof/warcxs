@@ -1,20 +1,32 @@
-const KEY = 'warcxs-activity-history:v1:1239908273885286546';
+const KEY = "warcxs-activity-history:v1:1239908273885286546";
 export function createActivityHistory(fetcher, storage, publish) {
   let state = {
-    userId: '1239908273885286546',
-    source: 'cache',
+    userId: "1239908273885286546",
+    source: "cache",
     recentActivities: [],
     activities: [],
     recentSongs: [],
   };
   let pending = null,
-    checkedAt = 0;
+    checkedAt = 0,
+    fingerprint;
   const valid = (v) =>
-    v?.userId === state.userId && Array.isArray(v.recentActivities) && Array.isArray(v.activities);
+    v?.userId === state.userId &&
+    Array.isArray(v.recentActivities) &&
+    Array.isArray(v.activities);
   try {
     const saved = JSON.parse(storage.getItem(KEY));
     if (valid(saved)) state = saved;
   } catch {}
+  const content = (value) =>
+    JSON.stringify([
+      value.recentActivities,
+      value.activities,
+      value.recentSongs,
+      value.roblox,
+      value.recentRobloxGames,
+    ]);
+  fingerprint = content(state);
   return {
     current: () => state,
     async refresh(force = false) {
@@ -27,19 +39,20 @@ export function createActivityHistory(fetcher, storage, publish) {
           const timer = setTimeout(() => controller.abort(), 12000);
           let next;
           try {
-            const response = await fetcher('/api/game-activity', {
-              cache: 'no-store',
+            const response = await fetcher("/api/game-activity", {
+              cache: "no-store",
               signal: controller.signal,
             });
-            if (!response.ok) throw Error('History unavailable');
+            if (!response.ok) throw Error("History unavailable");
             next = await response.json();
           } finally {
             clearTimeout(timer);
           }
-          if (!valid(next)) throw Error('Invalid history');
+          if (!valid(next)) throw Error("Invalid history");
           // An empty/reset remote database must not erase this browser's known history.
           const merged = new Map(state.recentActivities.map((a) => [a.id, a]));
-          for (const activity of next.recentActivities) merged.set(activity.id, activity);
+          for (const activity of next.recentActivities)
+            merged.set(activity.id, activity);
           state = {
             ...next,
             recentActivities: [...merged.values()]
@@ -47,10 +60,14 @@ export function createActivityHistory(fetcher, storage, publish) {
               .sort((a, b) => b.lastSeenAt - a.lastSeenAt)
               .slice(0, 500),
           };
-          try {
-            storage.setItem(KEY, JSON.stringify(state));
-          } catch {}
-          publish(state);
+          const nextFingerprint = content(state);
+          if (nextFingerprint !== fingerprint) {
+            fingerprint = nextFingerprint;
+            try {
+              storage.setItem(KEY, JSON.stringify(state));
+            } catch {}
+            publish(state);
+          }
         } catch {
           /* A transport error is not an empty history. */
         }

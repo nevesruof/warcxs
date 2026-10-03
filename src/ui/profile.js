@@ -1,9 +1,12 @@
 import {parseVideoId, resolveTrack, prefetchTracks} from '../services/playback-cache.js';
+import { discordAvatarUrl, discordBannerUrl } from '../services/discord-profile.js';
+import { observeTooltipPosition } from './tooltip-position.js';
+import { startBackgroundRefresh } from '../services/background-refresh.js';
 import {createRecentSongs} from './recent-songs.js';
 import {Radio as K, Pause as W, Play as G, Headphones as R, Expand as H} from './music-icons.js';
-import {playbackSong, isSelectedSong, statsTrackKey} from '../services/music-playback.js';
+import {playbackSong, isSelectedSong, statsTrackKey, SONG_AUDIO_FIELDS} from '../services/music-playback.js';
 
-import { profileFetch as fetch } from '../services/profile-api.js';
+import { profileFetch as fetch, currentProfile } from '../services/profile-api.js';
 import { activityGameKey, hasGameDetails } from '../services/game-info.js';
 import {
   C as e,
@@ -18,6 +21,7 @@ import {
   i as d,
   l as f,
   m as useAudio,
+  useAudioFields,
   o as h,
   p as g,
   r as _,
@@ -854,39 +858,28 @@ var ve = n(e()),
       [s, c] = (0, React.useState)(null);
     (0, React.useLayoutEffect)(() => {
       if (!i) return;
-      let e = null,
-        t = () => {
-          let e = n.current,
-            t = r.current;
-          if (!e || !t) return;
-          let i = e.getBoundingClientRect(),
-            a = t.getBoundingClientRect(),
-            o = i.left + i.width / 2 - a.width / 2,
-            s = window.innerWidth - be - a.width,
-            l = Math.min(Math.max(o, be), Math.max(be, s)),
-            u = i.top - a.height - ye,
-            d = u >= be ? `top` : `bottom`,
-            f = d === `top` ? u : Math.min(i.bottom + ye, window.innerHeight - be - a.height),
-            p = i.left + i.width / 2,
-            m = Math.min(Math.max(p - l, xe), a.width - xe);
-          c({
-            left: l,
-            top: f,
-            arrowLeft: m,
-            placement: d,
-          });
-        },
-        a = () => {
-          (t(), (e = window.requestAnimationFrame(a)));
-        };
-      (t(), (e = window.requestAnimationFrame(a)));
-      let o = typeof ResizeObserver < `u` ? new ResizeObserver(t) : null;
-      return (
-        o && (n.current && o.observe(n.current), r.current && o.observe(r.current)),
-        () => {
-          (e !== null && window.cancelAnimationFrame(e), o?.disconnect());
-        }
-      );
+      const update = () => {
+        let e = n.current,
+          t = r.current;
+        if (!e || !t) return;
+        let i = e.getBoundingClientRect(),
+          a = { width: t.offsetWidth, height: t.offsetHeight },
+          o = i.left + i.width / 2 - a.width / 2,
+          s = window.innerWidth - be - a.width,
+          l = Math.min(Math.max(o, be), Math.max(be, s)),
+          u = i.top - a.height - ye,
+          d = u >= be ? `top` : `bottom`,
+          f = d === `top` ? u : Math.min(i.bottom + ye, window.innerHeight - be - a.height),
+          p = i.left + i.width / 2,
+          m = Math.min(Math.max(p - l, xe), a.width - xe);
+        c({
+          left: l,
+          top: f,
+          arrowLeft: m,
+          placement: d,
+        });
+      };
+      return observeTooltipPosition(n.current, r.current, update);
     }, [i, e]);
     let l = () => {
       (o(!1), c(null));
@@ -1029,8 +1022,6 @@ var ve = n(e()),
         activities: u,
       } = e,
       [d, f] = (0, React.useState)(null),
-      p = t?.user.avatar || n.avatar,
-      m = t?.user.banner || t?.user_profile?.banner || n.banner,
       h =
         t?.user.display_name ||
         n.display_name ||
@@ -1043,8 +1034,8 @@ var ve = n(e()),
         t?.user_profile?.theme_colors?.[0] == null ? `#333333` : ue(t.user_profile.theme_colors[0]),
       v =
         t?.user_profile?.theme_colors?.[1] == null ? `#1a1a1a` : ue(t.user_profile.theme_colors[1]),
-      y = `/assets/itake-avatar.jpeg`,
-      b = `/assets/katana-banner.png`,
+      y = discordAvatarUrl(t?.user || n),
+      b = discordBannerUrl(t?.user || n),
       x = n.avatar_decoration_data?.asset || t?.user.avatar_decoration_data?.asset,
       S = `/assets/spirit-embers.png`,
       C = t?.user.clan || n.clan,
@@ -2624,7 +2615,7 @@ var ListeningClock = ({ payload: e }) => {
     });
   },
   MusicStats = ({ isModal = false, onClose }) => {
-  const playbackAudio = useAudio();
+  const playbackAudio = useAudioFields(SONG_AUDIO_FIELDS);
   let [range, setRange] = React.useState(`weeks`),
     [stats, setStats] = React.useState(null),
     [isLoading, setLoading] = React.useState(true),
@@ -5805,38 +5796,28 @@ var ContributionTooltip = ({ day: e, children: t }) => {
       [s, c] = (0, React.useState)(null);
     (0, React.useLayoutEffect)(() => {
       if (!i) return;
-      let e = null,
-        t = () => {
-          let e = n.current,
-            t = r.current;
-          if (!e || !t) return;
-          let i = e.getBoundingClientRect(),
-            a = t.getBoundingClientRect(),
-            o = i.left + i.width / 2 - a.width / 2,
-            s = window.innerWidth - ai - a.width,
-            l = Math.min(Math.max(o, ai), Math.max(ai, s)),
-            u = i.top - a.height - ii,
-            d = u >= ai ? `top` : `bottom`,
-            f = d === `top` ? u : Math.min(i.bottom + ii, window.innerHeight - ai - a.height),
-            p = i.left + i.width / 2,
-            m = Math.min(Math.max(p - l, oi), a.width - oi);
-          c({
-            left: l,
-            top: f,
-            arrowLeft: m,
-            placement: d,
-          });
-        },
-        a = () => {
-          (t(), (e = window.requestAnimationFrame(a)));
-        };
-      return (
-        t(),
-        (e = window.requestAnimationFrame(a)),
-        () => {
-          e !== null && window.cancelAnimationFrame(e);
-        }
-      );
+      const update = () => {
+        let e = n.current,
+          t = r.current;
+        if (!e || !t) return;
+        let i = e.getBoundingClientRect(),
+          a = { width: t.offsetWidth, height: t.offsetHeight },
+          o = i.left + i.width / 2 - a.width / 2,
+          s = window.innerWidth - ai - a.width,
+          l = Math.min(Math.max(o, ai), Math.max(ai, s)),
+          u = i.top - a.height - ii,
+          d = u >= ai ? `top` : `bottom`,
+          f = d === `top` ? u : Math.min(i.bottom + ii, window.innerHeight - ai - a.height),
+          p = i.left + i.width / 2,
+          m = Math.min(Math.max(p - l, oi), a.width - oi);
+        c({
+          left: l,
+          top: f,
+          arrowLeft: m,
+          placement: d,
+        });
+      };
+      return observeTooltipPosition(n.current, r.current, update);
     }, [e.date, i]);
     let l = () => {
         (o(!1), c(null));
@@ -7139,9 +7120,6 @@ function sa(e) {
 function ca(e) {
   return typeof e != `number` || Number.isNaN(e) ? `-` : `${new Intl.NumberFormat().format(e)} R$`;
 }
-function la(e, t) {
-  return e.length === t.length && e.every((e, n) => e === t[n]);
-}
 var RobloxCard = ({ profile: e }) => {
     let t = e.displayName || e.username || `Roblox`,
       n = e.username ? `@${e.username}` : ``,
@@ -7170,34 +7148,19 @@ var RobloxCard = ({ profile: e }) => {
     }, [i?.universeId]),
       (0, React.useEffect)(() => {
         let e = !1,
-          t,
           n = (t) => {
             e || ((m.current = !0), p(!1), c(t), u(null));
           };
         return (
           d(!0)
-            .then((r) => {
-              (n(r),
-                (t = window.setTimeout(() => {
-                  d(!0)
-                    .then((t) => {
-                      e ||
-                        ((t.obj !== r.obj ||
-                          t.mtl !== r.mtl ||
-                          t.mtlText !== r.mtlText ||
-                          !la(t.textures, r.textures)) &&
-                          n(t));
-                    })
-                    .catch(() => void 0);
-                }, 8e3)));
-            })
+            .then(n)
             .catch((t) => {
               !e &&
                 !m.current &&
                 (c(null), u(t instanceof Error ? t.message : `Avatar unavailable`));
             }),
           () => {
-            ((e = !0), t && window.clearTimeout(t));
+            e = !0;
           }
         );
       }, []));
@@ -7389,7 +7352,7 @@ function pa(e) {
   return e <= 0 ? ce : e < 55 ? oe : se;
 }
 var VolumeControl = () => {
-  let { volume: e, setVolume: t, isClipPlaying: n, isAudioDisabled: r } = useAudio(),
+  let { volume: e, setVolume: t, isClipPlaying: n, isAudioDisabled: r } = useAudioFields(['volume', 'isClipPlaying', 'isAudioDisabled']),
     i = pa(e),
     o = e <= 0 ? `mute` : e < 55 ? `medium` : `loud`,
     s = (0, React.useRef)(null),
@@ -7606,7 +7569,7 @@ function ga(e, t) {
   return (n.startsWith(r) && (a += 2), a);
 }
 var SongSearch = () => {
-  let audio = useAudio(),
+  let audio = useAudioFields(SONG_AUDIO_FIELDS),
     [query, setQuery] = React.useState(``),
     [recentSongs, setRecentSongs] = React.useState([]),
     [topTracks, setTopTracks] = React.useState([]);
@@ -7741,8 +7704,11 @@ var SongSearch = () => {
   latestPresence = null;
 async function subscribePresence(listener) {
   let active = true;
+  let pending = false;
+  let previous;
   const refresh = async () => {
-    if (document.hidden) return;
+    if (document.hidden || pending) return;
+    pending = true;
     try {
       const response = await fetch('/.netlify/functions/getLanyardPresence');
       const presence = await response.json();
@@ -7754,18 +7720,21 @@ async function subscribePresence(listener) {
           presence: Date.now(),
         },
       });
-      listener(presence, 'realtime');
+      const fingerprint = JSON.stringify(presence);
+      if (fingerprint !== previous) {
+        previous = fingerprint;
+        listener(presence, 'realtime');
+      }
     } catch {
       /* The API adapter supplies an explicit unknown state. */
+    } finally {
+      pending = false;
     }
   };
-  void refresh();
-  const timer = setInterval(refresh, 5000);
-  document.addEventListener('visibilitychange', refresh);
+  const stop = startBackgroundRefresh(refresh, 5000);
   return () => {
     active = false;
-    clearInterval(timer);
-    document.removeEventListener('visibilitychange', refresh);
+    stop();
   };
 }
 function getLatestPresence() {
@@ -9297,10 +9266,13 @@ async function subscribeProfile(listener) {
   const snapshot = f();
   if (snapshot?.profile)
     listener({
-      profile: snapshot.profile,
+      profile: currentProfile() || snapshot.profile,
       robloxProfile: snapshot.robloxProfile,
     });
-  const update = (event) => listener(event.detail);
+  const update = (event) => {
+    b(event.detail);
+    listener(event.detail);
+  };
   window.addEventListener('profile:updated', update);
   return () => window.removeEventListener('profile:updated', update);
 }
@@ -9382,7 +9354,7 @@ var MainProfile = () => {
     [l, u] = (0, React.useState)(r?.profile ?? null),
     [d, m] = (0, React.useState)(r?.robloxProfile ?? null),
     [h, _] = (0, React.useState)(!i),
-    { playbackSource: v, isPlaybackInterrupted: y, isClipPlaying: b } = useAudio(),
+    { playbackSource: v, isPlaybackInterrupted: y, isClipPlaying: b } = useAudioFields(['playbackSource', 'isPlaybackInterrupted', 'isClipPlaying']),
     x = (0, React.useRef)(v),
     S = (0, React.useRef)(i),
     w = (0, React.useRef)(i ? Date.now() : 0),

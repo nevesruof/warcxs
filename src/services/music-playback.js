@@ -1,3 +1,11 @@
+export const SONG_AUDIO_FIELDS = [
+  "isAudioDisabled",
+  "isAudioPlaying",
+  "isAudioLoading",
+  "playbackSource",
+  "manualPlaybackDetails",
+];
+
 export function statsTrackKey(track) {
   return [track.id, track.name, track.artists.join(",")].join("::");
 }

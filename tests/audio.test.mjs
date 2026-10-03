@@ -160,22 +160,51 @@ async function freshAudio() {
   const { createAudioComponents, updateAudioPresence } = await import(
     `../src/services/audio.js?case=${scenario}`
   );
+  const refs = [];
+  let hook = 0;
   const React = {
-    createContext: () => ({ Provider: "provider" }),
     useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
     useEffect: (setup) => setup(),
-    useContext: () => null,
+    useMemo: (value) => value(),
+    useRef: (value) => (refs[hook++] ??= { current: value }),
+    useCallback: (callback) => callback,
   };
-  const { AudioProvider } = createAudioComponents(
-    React,
-    (_type, props) => props,
-  );
-  const audio = () => AudioProvider({ children: null }).value;
+  const { AudioProvider, useAudio, useAudioFields } =
+    createAudioComponents(React);
+  AudioProvider({ children: null });
+  const audio = () => useAudio();
   audio.updatePresence = updateAudioPresence;
+  audio.select = (fields) => {
+    hook = 0;
+    return useAudioFields(fields);
+  };
   return audio;
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
+
+test("Audio progress does not rerender consumers that only need playback status", async (t) => {
+  const audio = await freshAudio();
+  let progress;
+  t.mock.method(globalThis, "setInterval", (callback) => {
+    progress = callback;
+    return 1;
+  });
+  audio().primePlayer();
+  await settle();
+  await audio().playTrack("Progress test", "Artist", 0, "spotify");
+  const fields = ["playbackSource", "isAudioDisabled"];
+  const initial = audio.select(fields);
+  FakePlayer.instances[0].getCurrentTime = () => 15;
+  progress();
+  audio().setVolume(50);
+  assert.equal(audio.select(fields), initial);
+  assert.equal(audio().playbackTime, 15);
+  audio().disableAudioForever();
+  const disabled = audio.select(fields);
+  assert.notEqual(disabled, initial);
+  assert.equal(disabled.isAudioDisabled, true);
+});
 
 test("hidden engine: YouTube plays audio-only from the Spotify offset with no visible window", async () => {
   const audio = await freshAudio();

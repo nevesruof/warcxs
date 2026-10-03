@@ -1,13 +1,16 @@
-import { createStatsfm, STATSFM_USER } from './statsfm.js';
-import { createActivityHistory } from './activity-history.js';
-import { nativeFetch, requestJson, readStored, storeValue } from './request.js';
-import { loadAvatar3d } from './roblox-avatar.js';
-import { updateAudioPresence } from './audio.js';
-import { prefetchTracks } from './playback-cache.js';
+import { createStatsfm, STATSFM_USER } from "./statsfm.js";
+import { createActivityHistory } from "./activity-history.js";
+import { nativeFetch, requestJson, readStored, storeValue } from "./request.js";
+import { loadAvatar3d } from "./roblox-avatar.js";
+import { updateAudioPresence } from "./audio.js";
+import { prefetchTracks } from "./playback-cache.js";
+import { createProfileTracker } from "./discord-profile.js";
+import { saveSnapshot } from "./snapshot-storage.js";
+import { startBackgroundRefresh } from "./background-refresh.js";
 
-const MUSIC_CACHE = 'statsfm-recent-v2';
-const SNAPSHOT_CACHE = 'cheatinformer-site-snapshot';
-const ROBLOX_CACHE = 'warcxs:last-roblox-game:zahidtql12';
+const MUSIC_CACHE = "statsfm-recent-v2";
+const PROFILE_CACHE = "warcxs:discord-profile:v1";
+const ROBLOX_CACHE = "warcxs:last-roblox-game:zahidtql12";
 const statsfm = createStatsfm(nativeFetch);
 let data;
 let history;
@@ -17,13 +20,19 @@ let robloxChecked = 0;
 let robloxRequest;
 let presenceRequest;
 let presenceChecked = 0;
+let profile;
 
 function refreshPresence() {
   if (presenceRequest) return presenceRequest;
-  if (Date.now() - presenceChecked < 4000) return Promise.resolve(data.snapshot.presence);
-  presenceRequest = requestJson('/api/presence')
+  if (Date.now() - presenceChecked < 4000)
+    return Promise.resolve(data.snapshot.presence);
+  presenceRequest = requestJson("/api/presence")
     .catch(offlinePresence)
     .then((presence) => {
+      presence.data.discord_user = {
+        ...presence.data.discord_user,
+        ...profile?.current(),
+      };
       data.snapshot.presence = presence;
       data.snapshot.updatedAt.presence = Date.now();
       presenceChecked = Date.now();
@@ -38,22 +47,47 @@ function refreshPresence() {
 }
 
 function publishSnapshot() {
-  storeValue(SNAPSHOT_CACHE, data.snapshot);
+  saveSnapshot(data.snapshot);
+}
+
+function publishProfile(user) {
+  data.snapshot.profile = {
+    ...data.snapshot.profile,
+    user: { ...data.snapshot.profile.user, ...user },
+  };
+  data.snapshot.presence.data.discord_user = {
+    ...data.snapshot.presence.data.discord_user,
+    ...user,
+  };
+  publishSnapshot();
+  window.dispatchEvent(
+    new CustomEvent("profile:updated", {
+      detail: {
+        profile: data.snapshot.profile,
+        robloxProfile: data.snapshot.robloxProfile,
+      },
+    }),
+  );
 }
 
 function publishSongs(songs) {
-  data.snapshot.recentSongs = songs;
   data.snapshot.updatedAt.recentSongs = Date.now();
+  if (JSON.stringify(songs) === JSON.stringify(data.snapshot.recentSongs))
+    return;
+  data.snapshot.recentSongs = songs;
   window.__statsfmRecentSongs = songs;
   storeValue(MUSIC_CACHE, { user: STATSFM_USER, songs });
   publishSnapshot();
   void prefetchTracks(songs);
-  window.dispatchEvent(new CustomEvent('statsfm:recent-songs', { detail: songs }));
+  window.dispatchEvent(
+    new CustomEvent("statsfm:recent-songs", { detail: songs }),
+  );
 }
 
 async function refreshListening(force = false) {
   if (listeningRequest) return listeningRequest;
-  if (!force && Date.now() - listeningChecked < 30000) return data.snapshot.recentSongs;
+  if (!force && Date.now() - listeningChecked < 30000)
+    return data.snapshot.recentSongs;
   listeningChecked = Date.now();
   listeningRequest = statsfm
     .recent(true)
@@ -78,17 +112,25 @@ async function refreshRoblox() {
   if (robloxRequest) return robloxRequest;
   if (Date.now() - robloxChecked < 15000) return data.snapshot.robloxProfile;
   robloxChecked = Date.now();
-  robloxRequest = requestJson('/api/roblox')
+  robloxRequest = requestJson("/api/roblox")
     .then((profile) => {
-      if (profile.lastPlayedGame) storeValue(ROBLOX_CACHE, profile.lastPlayedGame);
-      data.snapshot.robloxProfile = {
-        ...data.snapshot.robloxProfile,
+      const previous = data.snapshot.robloxProfile;
+      const next = {
+        ...previous,
         ...profile,
         lastPlayedGame: profile.lastPlayedGame || readStored(ROBLOX_CACHE),
       };
+      data.snapshot.robloxProfile = next;
+      if (
+        JSON.stringify({ ...next, fetchedAt: undefined }) ===
+        JSON.stringify({ ...previous, fetchedAt: undefined })
+      )
+        return next;
+      if (profile.lastPlayedGame)
+        storeValue(ROBLOX_CACHE, profile.lastPlayedGame);
       publishSnapshot();
       window.dispatchEvent(
-        new CustomEvent('profile:updated', {
+        new CustomEvent("profile:updated", {
           detail: {
             profile: data.snapshot.profile,
             robloxProfile: data.snapshot.robloxProfile,
@@ -109,7 +151,7 @@ function offlinePresence() {
     success: true,
     data: {
       discord_user: data.snapshot.presence.data.discord_user,
-      discord_status: 'unknown',
+      discord_status: "unknown",
       activities: [],
       listening_to_spotify: false,
       spotify: null,
@@ -126,43 +168,70 @@ const routes = {
   recentActivity: async () => (await history.refresh()).recentActivities,
   recentSongs: () => refreshListening(),
   getDiscordGameActivity: () => history.refresh(),
-  getGameInfo: (params) => requestJson(`/api/game-info?${params}`, { signal: AbortSignal.timeout(30000) }),
+  getGameInfo: (params) =>
+    requestJson(`/api/game-info?${params}`, {
+      signal: AbortSignal.timeout(30000),
+    }),
   getGithubContributions: () => data.github,
   getRobloxAvatar3d: () => loadAvatar3d(data.avatar3d),
   getRobloxGameSummary: (params) => requestJson(`/api/roblox?${params}`),
   views: () => ({ views: data.views }),
   getStatsfmMusic: (params) =>
-    statsfm.music(params.get('range') || 'weeks', params.get('refresh') === '1'),
+    statsfm.music(
+      params.get("range") || "weeks",
+      params.get("refresh") === "1",
+    ),
   getStatsfmAlbums: (params) =>
-    statsfm.albums(params.get('range') || 'weeks', params.get('refresh') === '1'),
+    statsfm.albums(
+      params.get("range") || "weeks",
+      params.get("refresh") === "1",
+    ),
   getYoutubeVideo: (params) => requestJson(`/api/playback?${params}`),
   getSpotifyLyrics: (params) => requestJson(`/api/lyrics?${params}`),
 };
 
+export const currentProfile = () => data?.snapshot.profile;
+
 // Only the retained interface uses this adapter; global fetch remains untouched.
 export async function profileFetch(input, options) {
   const url = new URL(
-    typeof input === 'string' ? input : input.url || String(input),
+    typeof input === "string" ? input : input.url || String(input),
     location.href,
   );
-  if (url.origin !== location.origin || !url.pathname.startsWith('/.netlify/functions/'))
+  if (
+    url.origin !== location.origin ||
+    !url.pathname.startsWith("/.netlify/functions/")
+  )
     return nativeFetch(input, options);
-  const route = routes[url.pathname.split('/').pop()];
-  if (!route) return Response.json({ error: 'Unknown endpoint' }, { status: 404 });
+  const route = routes[url.pathname.split("/").pop()];
+  if (!route)
+    return Response.json({ error: "Unknown endpoint" }, { status: 404 });
   try {
     return Response.json(await route(url.searchParams));
   } catch (error) {
-    return Response.json({ success: false, message: error.message }, { status: 503 });
+    return Response.json(
+      { success: false, message: error.message },
+      { status: 503 },
+    );
   }
 }
 
 export async function initializeProfile() {
-  data = await requestJson('/data/profile.json');
+  data = await requestJson("/data/profile.json");
+  profile = createProfileTracker({
+    request: () => requestJson("/api/profile"),
+    read: () => readStored(PROFILE_CACHE),
+    save: (user) => storeValue(PROFILE_CACHE, user),
+    publish: publishProfile,
+  });
+  if (profile.current()) publishProfile(profile.current());
   data.snapshot.presence = offlinePresence();
   void refreshPresence();
   const music = readStored(MUSIC_CACHE);
   data.snapshot.recentSongs =
-    music?.user === STATSFM_USER && Array.isArray(music.songs) ? music.songs.slice(0, 20) : [];
+    music?.user === STATSFM_USER && Array.isArray(music.songs)
+      ? music.songs.slice(0, 20)
+      : [];
   data.snapshot.robloxProfile.lastPlayedGame = readStored(ROBLOX_CACHE);
   window.__statsfmRecentSongs = data.snapshot.recentSongs;
   void prefetchTracks(data.snapshot.recentSongs);
@@ -177,23 +246,20 @@ export async function initializeProfile() {
       data.snapshot.gameActivity = state;
       window.__activityHistory = state.recentActivities;
       publishSnapshot();
-      window.dispatchEvent(new CustomEvent('activity:history', { detail: state.recentActivities }));
+      window.dispatchEvent(
+        new CustomEvent("activity:history", { detail: state.recentActivities }),
+      );
     },
   );
   data.snapshot.recentActivities = history.current().recentActivities;
   data.snapshot.gameActivity = history.current();
-  publishSnapshot();
+  saveSnapshot(data.snapshot, true);
   const refresh = () => {
     if (document.hidden) return;
     void history.refresh();
     void refreshListening();
     void refreshRoblox();
+    void profile.refresh();
   };
-  refresh();
-  const timer = setInterval(refresh, 15000);
-  document.addEventListener('visibilitychange', refresh);
-  window.addEventListener('online', refresh);
-  window.addEventListener('pagehide', () => clearInterval(timer), {
-    once: true,
-  });
+  startBackgroundRefresh(refresh);
 }

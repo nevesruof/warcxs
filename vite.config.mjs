@@ -6,7 +6,7 @@ function localApi() {
     configureServer(server) {
       server.middlewares.use('/api', async (req, res, next) => {
         const route = req.url.split('?')[0].slice(1);
-        if (!['presence', 'game-activity', 'game-info', 'roblox', 'lyrics', 'playback'].includes(route))
+        if (!['presence', 'profile', 'game-activity', 'game-info', 'roblox', 'lyrics', 'playback'].includes(route))
           return next();
         try {
           const { default: handler } = await server.ssrLoadModule(`/api/${route}.js`);

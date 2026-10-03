@@ -3,7 +3,7 @@ import {
   jsxRuntime,
   b as motion,
   y as AnimatePresence,
-  m as useAudio,
+  useAudioFields,
 } from "./runtime.js";
 import {
   Radio as RadioIcon,
@@ -12,7 +12,7 @@ import {
   Headphones as HeadphonesIcon,
   Expand as ExpandIcon,
 } from "./music-icons.js";
-import { playbackSong, isSelectedSong } from "../services/music-playback.js";
+import { playbackSong, isSelectedSong, SONG_AUDIO_FIELDS } from "../services/music-playback.js";
 import { timeAgo } from "../services/time.js";
 const contentAnimation = {
   hidden: {
@@ -48,7 +48,7 @@ export function createRecentSongs(MusicStats) {
       ),
       [failedArtworkIds, setFailedArtworkIds] = React.useState(() => new Set()),
       [isStatsOpen, setStatsOpen] = React.useState(false),
-      audio = useAudio(),
+      audio = useAudioFields(SONG_AUDIO_FIELDS),
       recentSongs = React.useMemo(() => songs.slice(0, 20), [songs]),
       firstRow = React.useMemo(() => recentSongs.slice(0, 10), [recentSongs]),
       secondRow = React.useMemo(() => recentSongs.slice(10, 20), [recentSongs]);

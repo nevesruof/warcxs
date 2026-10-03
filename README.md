@@ -22,6 +22,7 @@ npm run build
 - Las búsquedas de la lista de canciones se adelantan desde la carga de datos, con dos solicitudes de fondo como máximo y una caché persistente. Play reutiliza la pista preparada sin volver a cargarla; `Stop` conserva su búfer y cancela solicitudes pendientes.
 - Roblox consulta el usuario `zahidtql12` y su juego actual. Si la presencia no está disponible, intenta usar el último juego obtenido por el bot.
 - Las actividades de Discord muestran la imagen del juego cuando Discord proporciona un asset o una URL pública.
+- La foto y el banner se consultan por separado de la presencia y se actualizan sin recargar. Los hashes animados conservan la animación; quitar una imagen en Discord también la elimina del perfil. `DISCORD_BOT_TOKEN` permite consultar Discord cada minuto. Sin él, se usa un proveedor público con caché propia (hasta varias horas); esa alternativa no garantiza cambios inmediatos. Las fallas conservan la última imagen conocida.
 - `OPEN DETAILS` aparece en actividades actuales y recientes con información disponible. `/api/game-info` resuelve automáticamente los juegos registrados por el bot: IGDB y Steam aportan descripción, capturas y ficha técnica; Roblox aporta la experiencia concreta; Discord sirve como alternativa. Sin credenciales de IGDB se conservan los demás proveedores. No se muestran fichas inventadas cuando no hay datos.
 
 ## Variables de entorno
@@ -32,6 +33,7 @@ Parte de `.env.example` y configura las variables en Vercel o en tu entorno de s
 | --- | --- |
 | `ACTIVITY_BOT_URL` | Opcional: reemplaza la URL del bot existente. Sin esta variable se conserva la conexión anterior. |
 | `ACTIVITY_BOT_TOKEN` | Token opcional para ese bot. |
+| `DISCORD_BOT_TOKEN` | Token de un bot de Discord para actualizar foto y banner directamente cada minuto. Se mantiene únicamente en el servidor. |
 | `YOUTUBE_API_KEY` | Habilita audio sincronizado dentro de la página. |
 | `IGDB_CLIENT_ID` / `IGDB_CLIENT_SECRET` | Opcionales: amplían las fichas de juegos con datos de IGDB. |
 | `ROBLOX_COOKIE` | Cookie `.ROBLOSECURITY` que permite consultar presencia de Roblox. |

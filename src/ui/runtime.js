@@ -1,5 +1,7 @@
 import { createAudioComponents } from '../services/audio.js';
-import { profileFetch as fetch } from '../services/profile-api.js';
+import { saveSnapshot } from '../services/snapshot-storage.js';
+import { discordAvatarUrl } from '../services/discord-profile.js';
+import { profileFetch as fetch, currentProfile } from '../services/profile-api.js';
 var e = Object.create,
   t = Object.defineProperty,
   n = Object.getOwnPropertyDescriptor,
@@ -16800,8 +16802,9 @@ var qd = s((e) => {
     t.exports = qd();
   }),
   K = Jd(),
-  audioComponents = createAudioComponents(y, K.jsx),
+  audioComponents = createAudioComponents(y),
   useAudio = audioComponents.useAudio,
+  useAudioFields = audioComponents.useAudioFields,
   AudioProvider = audioComponents.AudioProvider;
 function Of(e) {
   return !!e?.timestamps?.paused;
@@ -16868,9 +16871,7 @@ function Vf(e) {
   return `profile` in t && `presence` in t && `recentActivities` in t && `gameInfo` in t;
 }
 function Hf(e) {
-  try {
-    localStorage.setItem(Mf, JSON.stringify(e));
-  } catch {}
+  saveSnapshot(e);
 }
 function Uf(e) {
   if (!e) return null;
@@ -17582,22 +17583,21 @@ function SiteApp() {
     })
   );
 }
-var vw = `/assets/itake-avatar.jpeg`;
-function yw(e, t, n) {
+function yw(e, t) {
   let r = document.head.querySelector(`link[rel="${e}"]`);
   (r || ((r = document.createElement(`link`)), (r.rel = e), document.head.appendChild(r)),
-    (r.type = n),
+    r.removeAttribute('type'),
     (r.href = t));
 }
-function bw() {
-  let { hostname: e } = window.location;
-  e !== `localhost` &&
-    e !== `127.0.0.1` &&
-    (yw(`icon`, vw, `image/jpeg`), yw(`apple-touch-icon`, vw, `image/jpeg`));
+function bw(profile = currentProfile() || Gf()?.profile) {
+  const url = discordAvatarUrl(profile?.user, 128);
+  yw(`icon`, url);
+  yw(`apple-touch-icon`, url);
 }
 async function mountApp() {
-  (bw(),
-    await Kf(),
+  (await Kf(),
+    bw(),
+    window.addEventListener('profile:updated', (event) => bw(event.detail.profile)),
     (0, b.createRoot)(document.getElementById(`root`)).render(
       (0, K.jsx)(y.StrictMode, {
         children: (0, K.jsx)(gn, {
@@ -17627,6 +17627,7 @@ export {
   Vp as i,
   Gf as l,
   useAudio as m,
+  useAudioFields,
   dw as n,
   np as o,
   kf as p,
