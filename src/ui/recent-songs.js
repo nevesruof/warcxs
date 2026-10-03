@@ -24,6 +24,12 @@ const contentAnimation = {
     y: 0,
   },
 };
+const panelBackground = {
+  background: `
+    radial-gradient(circle at top left, rgb(var(--p-50) / 0.08), transparent 35%),
+    linear-gradient(180deg, rgb(var(--glass-base) / 0.62), rgb(var(--p-950) / 0.8))
+  `,
+};
 const fallbackArtwork = {
   background: `linear-gradient(180deg, rgb(var(--theme-rgb) / 0.34), rgb(var(--p-950) / 0.92))`,
 };
@@ -37,7 +43,6 @@ const artworkGlow = {
 };
 export function createRecentSongs(MusicStats) {
   return function RecentSongs({ songs }) {
-    const carouselRef = React.useRef(null);
     let [selectedId, setSelectedId] = React.useState(
         () => songs[0]?.id || null,
       ),
@@ -51,27 +56,6 @@ export function createRecentSongs(MusicStats) {
     React.useEffect(() => {
       if (selectedSong) void audio.prepareSong(playbackSong(selectedSong));
     }, [selectedSong?.id]);
-    React.useEffect(() => {
-      const carousel = carouselRef.current;
-      if (!carousel || !window.IntersectionObserver) return;
-      const byId = new Map(recentSongs.map((song) => [String(song.id), song]));
-      const observer = new IntersectionObserver(
-        (entries) => {
-          for (const entry of entries) {
-            if (!entry.isIntersecting) continue;
-            const song = byId.get(entry.target.dataset.songId);
-            if (song)
-              void audio.prepareSong(playbackSong(song), { cue: false });
-            observer.unobserve(entry.target);
-          }
-        },
-        { root: carousel, rootMargin: "0px 100% 0px 0px", threshold: 0.1 },
-      );
-      carousel
-        .querySelectorAll("[data-song-id]")
-        .forEach((card) => observer.observe(card));
-      return () => observer.disconnect();
-    }, [recentSongs]);
     React.useEffect(() => {
       if (recentSongs.length === 0) {
         setSelectedId(null);
@@ -199,7 +183,8 @@ export function createRecentSongs(MusicStats) {
         });
       };
     return jsxRuntime.jsxs(`section`, {
-      className: `recent-songs-panel flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden rounded-xl p-4 sm:p-5`,
+      className: `recent-songs-panel surface-panel flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden rounded-xl border border-purple-400/[0.08] p-4 sm:p-5`,
+      style: panelBackground,
       children: [
         jsxRuntime.jsxs(`div`, {
           className: `mb-4 flex items-start justify-between gap-4`,
@@ -327,7 +312,6 @@ export function createRecentSongs(MusicStats) {
         }),
         jsxRuntime.jsx(`div`, {
           className: `flex w-full min-w-0 gap-3 overflow-x-auto pb-1 lg:hidden`,
-          ref: carouselRef,
           children: recentSongs.map((song) => {
             let selected = selectedId === song.id,
               hasArtwork = !!song.albumArtUrl && !failedArtworkIds.has(song.id);
@@ -344,7 +328,6 @@ export function createRecentSongs(MusicStats) {
                     (event.preventDefault(), setSelectedId(song.id));
                 },
                 role: `button`,
-                "data-song-id": song.id,
                 tabIndex: 0,
                 className: `relative min-h-[210px] w-[calc(100vw-2.5rem)] max-w-[calc(100vw-2.5rem)] shrink-0 overflow-hidden rounded-[24px] border text-left sm:w-[280px] sm:max-w-[280px] ${selected ? `border-purple-200/20` : `border-purple-200/10`}`,
                 children: [

@@ -5,6 +5,8 @@ const CACHE_TTL = 6 * 60 * 60 * 1000;
 const MAX_MATCHES = 40;
 const matches = new Map();
 const requests = new Map();
+const prefetchWorkers = new Set();
+let prefetchQueue = [];
 const YOUTUBE_HOSTS = new Set([
   "youtube.com",
   "www.youtube.com",
@@ -49,13 +51,49 @@ for (const [key, match] of Object.entries(saved || {}).slice(-MAX_MATCHES)) {
     matches.set(key, match);
 }
 
+function trackKey(track, artist) {
+  return JSON.stringify([
+    String(track || "")
+      .trim()
+      .toLowerCase(),
+    String(artist || "")
+      .trim()
+      .toLowerCase(),
+  ]);
+}
+
+export function getCachedTrack(track, artist) {
+  const match = matches.get(trackKey(track, artist));
+  return match?.expires > Date.now() ? match : null;
+}
+
+// Resolve the displayed playlist before playback; keep background requests bounded.
+export function prefetchTracks(tracks) {
+  prefetchQueue = tracks.slice(0, 20);
+  while (prefetchQueue.length && prefetchWorkers.size < 2) {
+    const worker = (async () => {
+      while (prefetchQueue.length) {
+        const song = prefetchQueue.shift();
+        try {
+          await resolveTrack(song.trackName, song.artistName);
+        } catch {
+          /* A failed lookup remains retryable when the song is selected. */
+        }
+      }
+    })();
+    prefetchWorkers.add(worker);
+    void worker.finally(() => prefetchWorkers.delete(worker));
+  }
+  return Promise.all([...prefetchWorkers]);
+}
+
 export function resolveTrack(track, artist) {
   track = String(track || "").trim();
   artist = String(artist || "").trim();
   if (!track) return Promise.resolve({ videoIds: [], available: false });
-  const key = JSON.stringify([track.toLowerCase(), artist.toLowerCase()]);
-  const cached = matches.get(key);
-  if (cached?.expires > Date.now()) return Promise.resolve(cached);
+  const key = trackKey(track, artist);
+  const cached = getCachedTrack(track, artist);
+  if (cached) return Promise.resolve(cached);
   if (requests.has(key)) return requests.get(key);
   const query = new URLSearchParams({ track, artist });
   const request = requestJson(`/api/playback?${query}`)

@@ -1,4 +1,4 @@
-import {parseVideoId, resolveTrack} from '../services/playback-cache.js';
+import {parseVideoId, resolveTrack, prefetchTracks} from '../services/playback-cache.js';
 import {createRecentSongs} from './recent-songs.js';
 import {Radio as K, Pause as W, Play as G, Headphones as R, Expand as H} from './music-icons.js';
 import {playbackSong, isSelectedSong, statsTrackKey} from '../services/music-playback.js';
@@ -2635,6 +2635,10 @@ var ListeningClock = ({ payload: e }) => {
   const [albumLoading, setAlbumLoading] = React.useState(false);
   const [albumError, setAlbumError] = React.useState(null);
   React.useEffect(() => {
+    if (stats?.topTracks && !playbackAudio.isAudioDisabled)
+      void prefetchTracks(stats.topTracks.map(playbackSong));
+  }, [stats?.topTracks, playbackAudio.isAudioDisabled]);
+  React.useEffect(() => {
     if (category !== 'album' || !stats || stats.range.id !== range || stats.albumsLoaded) return;
     let cancelled = false;
     setAlbumLoading(true);
@@ -3091,20 +3095,8 @@ var $t = ({
                 else n();
               },
               children: [
-                (0, jsxRuntime.jsx)(motion.div, {
-                  className: `fixed inset-0 bg-[rgba(4,3,10,0.78)] backdrop-blur-xl`,
-                  initial: {
-                    opacity: 0,
-                  },
-                  animate: {
-                    opacity: 1,
-                  },
-                  exit: {
-                    opacity: 0,
-                  },
-                }),
                 (0, jsxRuntime.jsxs)(motion.div, {
-                  className: `relative z-10 my-auto w-full max-w-[1180px] overflow-hidden rounded-[28px] border border-white/10 bg-[rgba(11,10,18,0.96)] shadow-[0_28px_120px_rgba(0,0,0,0.58)]`,
+                  className: `relative z-10 my-auto w-full max-w-[1180px] overflow-hidden rounded-[28px] border border-white/10 bg-[rgba(11,10,18,0.96)]`,
                   initial: {
                     opacity: 0,
                     scale: 0.96,

@@ -19,7 +19,7 @@ npm run build
 - Al entrar se reproduce únicamente la pista activa de Spotify, cuando está disponible. Si no hay una pista activa, la página permanece en silencio.
 - Las letras proceden de LRCLIB. Las líneas LRC se resaltan según el segundo de reproducción; si no existen, se muestran las letras simples disponibles.
 - La reproducción de una pista usa YouTube dentro de la página cuando `YOUTUBE_API_KEY` está configurada. Si no lo está, las pistas elegidas manualmente se abren en el reproductor embebido de Spotify.
-- Las canciones se preparan al seleccionar una tarjeta o acercarse a su botón. Una caché compartida y persistente evita repetir búsquedas; el reproductor se reutiliza. `Stop` cancela también las solicitudes pendientes.
+- Las búsquedas de la lista de canciones se adelantan desde la carga de datos, con dos solicitudes de fondo como máximo y una caché persistente. Play reutiliza la pista preparada sin volver a cargarla; `Stop` conserva su búfer y cancela solicitudes pendientes.
 - Roblox consulta el usuario `zahidtql12` y su juego actual. Si la presencia no está disponible, intenta usar el último juego obtenido por el bot.
 - Las actividades de Discord muestran la imagen del juego cuando Discord proporciona un asset o una URL pública.
 - `OPEN DETAILS` aparece en actividades actuales y recientes con información disponible. `/api/game-info` resuelve automáticamente los juegos registrados por el bot: IGDB y Steam aportan descripción, capturas y ficha técnica; Roblox aporta la experiencia concreta; Discord sirve como alternativa. Sin credenciales de IGDB se conservan los demás proveedores. No se muestran fichas inventadas cuando no hay datos.

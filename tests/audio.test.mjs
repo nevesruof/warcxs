@@ -75,7 +75,20 @@ function element(tag) {
 }
 const body = element("body");
 const head = element("head");
-globalThis.document = { hidden: false, body, head, createElement: element };
+const documentListeners = new Map();
+globalThis.document = {
+  hidden: false,
+  body,
+  head,
+  createElement: element,
+  addEventListener(type, listener) {
+    if (!documentListeners.has(type)) documentListeners.set(type, new Set());
+    documentListeners.get(type).add(listener);
+  },
+  removeEventListener(type, listener) {
+    documentListeners.get(type)?.delete(listener);
+  },
+};
 
 class FakePlayer {
   static instances = [];
@@ -87,6 +100,8 @@ class FakePlayer {
     this.played = 0;
     this.muted = false;
     this.stopped = 0;
+    this.paused = 0;
+    this.seeks = [];
     FakePlayer.instances.push(this);
     queueMicrotask(() => options.events.onReady());
   }
@@ -117,7 +132,13 @@ class FakePlayer {
   playVideo() {
     this.played++;
   }
-  pauseVideo() {}
+  pauseVideo() {
+    this.paused++;
+    this.options.events.onStateChange({ data: 2 });
+  }
+  seekTo(time) {
+    this.seeks.push(time);
+  }
   destroy() {}
 }
 globalThis.YT = { Player: FakePlayer, PlayerState: { PLAYING: 1, ENDED: 0 } };
@@ -131,6 +152,7 @@ async function freshAudio() {
   FakePlayer.instances.length = 0;
   body.children.length = 0;
   head.children.length = 0;
+  documentListeners.clear();
   storage.clear();
   delete globalThis.YT;
   globalThis.YT = { Player: FakePlayer, PlayerState: { PLAYING: 1, ENDED: 0 } };
@@ -141,7 +163,7 @@ async function freshAudio() {
   const React = {
     createContext: () => ({ Provider: "provider" }),
     useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
-    useEffect: () => {},
+    useEffect: (setup) => setup(),
     useContext: () => null,
   };
   const { AudioProvider } = createAudioComponents(
@@ -266,17 +288,26 @@ test("prepared songs dispatch playback without another lookup or reloading the v
   const [engine] = FakePlayer.instances;
   assert.equal(engine.cued.length, 1);
   assert.equal(engine.played, 0);
+  await audio().prepareSong(song);
+  await audio().prepareSong(song);
+  assert.equal(
+    engine.cued.length,
+    1,
+    "Focus and hover must not restart the same prepared video",
+  );
   await audio().prepareSong(
     { trackName: "Adjacent Song", artistName: "Artist" },
     { cue: false },
   );
   assert.equal(engine.cued.length, 1);
-  engine.stopVideo = function () {
-    this.stopped++;
-    this.options.events.onStateChange({ data: 0 });
-  };
   const requestsAfterPreparation = playbackRequests;
-  assert.equal(await audio().toggleSong(song), true);
+  const playing = audio().toggleSong(song);
+  assert.equal(
+    engine.played,
+    1,
+    "A cached track dispatches playback within the click handler",
+  );
+  assert.equal(await playing, true);
   assert.equal(playbackRequests, requestsAfterPreparation);
   assert.equal(engine.loaded.length, 0);
   assert.equal(engine.played, 1);
@@ -284,9 +315,12 @@ test("prepared songs dispatch playback without another lookup or reloading the v
   assert.equal(audio().playbackSource, "manual");
   await audio().toggleSong(song);
   assert.equal(audio().playbackSource, "none");
-  assert.equal(engine.stopped, 1);
+  assert.equal(engine.stopped, 0, "Stop must preserve the loaded stream");
+  assert.equal(engine.paused, 1);
   await audio().toggleSong(song);
-  assert.equal(engine.loaded.length, 1);
+  assert.equal(engine.loaded.length, 0);
+  assert.equal(engine.seeks.at(-1), 0);
+  assert.equal(engine.played, 2);
   audio().stopPlayback();
 });
 
@@ -323,4 +357,22 @@ test("preparing a different song never interrupts an active stream", async () =>
   assert.equal(engine.loaded.length, 1);
   assert.equal(audio().playbackSource, "spotify");
   audio().stopPlayback();
+});
+
+test("mobile playback retries on an activated click and cannot restart a stopped song", async () => {
+  const audio = await freshAudio();
+  audio().primePlayer();
+  await settle();
+  await audio().playVideo("aaaaaaaaaaa", 0, "manual");
+  const [engine] = FakePlayer.instances;
+  engine.options.events.onAutoplayBlocked();
+  const beforeRetry = engine.played;
+  assert.ok(documentListeners.has("click"));
+  assert.equal(documentListeners.has("pointerdown"), false);
+  for (const listener of documentListeners.get("click")) listener();
+  assert.equal(engine.played, beforeRetry + 1);
+  engine.options.events.onAutoplayBlocked();
+  audio().stopPlayback();
+  for (const listener of documentListeners.get("click")) listener();
+  assert.equal(engine.played, beforeRetry + 1);
 });

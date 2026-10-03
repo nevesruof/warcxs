@@ -12,11 +12,6 @@
 .profile-page {
   overflow-x: clip;
 }
-.recent-songs-panel {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-}
 .game-details-trigger {
   display: block;
   margin-top: 0.5rem;
@@ -241,6 +236,11 @@ html {
 }
 .game-details-overlay {
   z-index: 10001;
+}
+.recent-songs-panel button,
+.music-track-playback,
+.dock-song-search__item {
+  touch-action: manipulation;
 }
 .now-playing-dock .spotify-now-playing {
   transition:

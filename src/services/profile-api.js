@@ -3,6 +3,7 @@ import { createActivityHistory } from './activity-history.js';
 import { nativeFetch, requestJson, readStored, storeValue } from './request.js';
 import { loadAvatar3d } from './roblox-avatar.js';
 import { updateAudioPresence } from './audio.js';
+import { prefetchTracks } from './playback-cache.js';
 
 const MUSIC_CACHE = 'statsfm-recent-v2';
 const SNAPSHOT_CACHE = 'cheatinformer-site-snapshot';
@@ -46,6 +47,7 @@ function publishSongs(songs) {
   window.__statsfmRecentSongs = songs;
   storeValue(MUSIC_CACHE, { user: STATSFM_USER, songs });
   publishSnapshot();
+  void prefetchTracks(songs);
   window.dispatchEvent(new CustomEvent('statsfm:recent-songs', { detail: songs }));
 }
 
@@ -163,6 +165,7 @@ export async function initializeProfile() {
     music?.user === STATSFM_USER && Array.isArray(music.songs) ? music.songs.slice(0, 20) : [];
   data.snapshot.robloxProfile.lastPlayedGame = readStored(ROBLOX_CACHE);
   window.__statsfmRecentSongs = data.snapshot.recentSongs;
+  void prefetchTracks(data.snapshot.recentSongs);
   history = createActivityHistory(
     nativeFetch,
     {

@@ -1,5 +1,9 @@
 import { readStored, storeValue } from "./request.js";
-import { resolveTrack, parseVideoId } from "./playback-cache.js";
+import {
+  resolveTrack,
+  getCachedTrack,
+  parseVideoId,
+} from "./playback-cache.js";
 
 const clamp = (value, max = 100) =>
   Math.min(max, Math.max(0, Number(value) || 0));
@@ -23,6 +27,8 @@ let state = {
 let entered = false;
 let player;
 let playerReady;
+let playerAvailable = false;
+let loadedVideoId;
 let generation = 0;
 let progressTimer;
 let spotifyResume;
@@ -178,6 +184,7 @@ async function ensurePlayer() {
             events: {
               onReady: () => {
                 clearTimeout(timer);
+                playerAvailable = true;
                 applyPlayerLevel();
                 resolve(player);
               },
@@ -209,6 +216,8 @@ async function ensurePlayer() {
               },
               onError: () => {
                 clearTimeout(timer);
+                loadedVideoId = null;
+                preparedVideoId = null;
                 reject(new Error("Video cannot be embedded"));
                 tryNextCandidate();
               },
@@ -218,6 +227,8 @@ async function ensurePlayer() {
     )
     .catch((error) => {
       playerReady = null;
+      playerAvailable = false;
+      loadedVideoId = null;
       player?.destroy?.();
       player = null;
       engineHost?.remove();
@@ -253,7 +264,16 @@ function watchAutoplay(request) {
 }
 
 function retryYoutube() {
-  if (!youtubeBlocked || !player || state.isAudioDisabled) return;
+  if (
+    !youtubeBlocked ||
+    !playerAvailable ||
+    !state.activeVideoId ||
+    state.playbackSource === "none" ||
+    state.isAudioDisabled ||
+    state.isClipPlaying ||
+    state.isPlaybackInterrupted
+  )
+    return;
   youtubeBlocked = false;
   applyPlayerLevel();
   player.playVideo?.();
@@ -277,8 +297,14 @@ async function prepareSong(song, { cue = true } = {}) {
       !state.isClipPlaying &&
       !state.isPlaybackInterrupted
     ) {
-      preparedVideoId = result.videoId;
-      yt.cueVideoById?.({ videoId: preparedVideoId, startSeconds: 0 });
+      if (
+        preparedVideoId !== result.videoId &&
+        loadedVideoId !== result.videoId
+      ) {
+        loadedVideoId = null;
+        preparedVideoId = result.videoId;
+        yt.cueVideoById?.({ videoId: preparedVideoId, startSeconds: 0 });
+      }
     }
     return true;
   } catch {
@@ -298,6 +324,7 @@ async function playVideo(
   if (!keepCandidates) candidates = [];
   const request = ++generation;
   const requestedAt = Date.now();
+  youtubeBlocked = false;
   removeEmbed();
   publish({
     playbackSource: source,
@@ -305,7 +332,7 @@ async function playVideo(
     isAudioPlaying: false,
   });
   try {
-    const yt = await ensurePlayer();
+    const yt = playerAvailable ? player : await ensurePlayer();
     if (request !== generation) return false;
     const offset = Math.max(
       0,
@@ -319,7 +346,11 @@ async function playVideo(
     });
     applyPlayerLevel();
     if (preparedVideoId === id && offset === 0) yt.playVideo();
-    else yt.loadVideoById({ videoId: id, startSeconds: offset });
+    else if (loadedVideoId === id) {
+      yt.seekTo(offset, true);
+      yt.playVideo();
+    } else yt.loadVideoById({ videoId: id, startSeconds: offset });
+    loadedVideoId = id;
     preparedVideoId = null;
     watchAutoplay(request);
     clearInterval(progressTimer);
@@ -362,6 +393,8 @@ function openSpotifyEmbed(url) {
 
 async function playTrack(track, artist, startTime = 0, source = "spotify") {
   if (state.isAudioDisabled || state.volume === 0 || !entered) return false;
+  const cached = getCachedTrack(track, artist);
+  if (cached?.available) return playMatch(cached, startTime, source);
   const request = ++generation;
   const requestedAt = Date.now();
   publish({
@@ -376,17 +409,11 @@ async function playTrack(track, artist, startTime = 0, source = "spotify") {
       ensurePlayer(),
     ]);
     if (request !== generation) return false;
-    const ids = [
-      ...new Set([result.videoId, ...(result.videoIds || [])].filter(Boolean)),
-    ];
-    if (ids.length) {
+    if (result.available) {
       const offset =
         startTime +
         (source === "spotify" ? (Date.now() - requestedAt) / 1000 : 0);
-      candidates = ids
-        .slice(1)
-        .map((id) => ({ id, offset, source, at: Date.now() }));
-      return playVideo(ids[0], offset, source, { keepCandidates: true });
+      return playMatch(result, offset, source);
     }
   } catch {
     if (request !== generation) return false;
@@ -398,6 +425,13 @@ async function playTrack(track, artist, startTime = 0, source = "spotify") {
     return true;
   resumeOnFailure();
   return false;
+}
+
+function playMatch(match, offset, source) {
+  candidates = match.videoIds
+    .slice(1)
+    .map((id) => ({ id, offset, source, at: Date.now() }));
+  return playVideo(match.videoId, offset, source, { keepCandidates: true });
 }
 
 function toggleSong(song) {
@@ -423,7 +457,6 @@ function stopPlayback({ resumeSpotify = false } = {}) {
   clearTimeout(autoplayWatch);
   clearInterval(progressTimer);
   removeEmbed();
-  preparedVideoId = null;
   publish({
     playbackSource: "none",
     activeVideoId: null,
@@ -433,7 +466,7 @@ function stopPlayback({ resumeSpotify = false } = {}) {
     playbackDuration: 0,
   });
   try {
-    player?.stopVideo?.();
+    player?.pauseVideo?.();
   } catch {
     /* Keep the engine ready for the next track. */
   }
@@ -550,10 +583,10 @@ export function createAudioComponents(React, jsx) {
   function AudioProvider({ children }) {
     const current = React.useSyncExternalStore(subscribe, () => state);
     React.useEffect(() => {
-      document.addEventListener("pointerdown", retryYoutube);
+      document.addEventListener("click", retryYoutube);
       document.addEventListener("keydown", retryYoutube);
       return () => {
-        document.removeEventListener("pointerdown", retryYoutube);
+        document.removeEventListener("click", retryYoutube);
         document.removeEventListener("keydown", retryYoutube);
       };
     }, []);
