@@ -12,6 +12,11 @@
 .profile-page {
   overflow-x: clip;
 }
+.recent-songs-panel {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
 .game-details-trigger {
   display: block;
   margin-top: 0.5rem;

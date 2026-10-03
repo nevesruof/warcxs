@@ -1,17 +1,30 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import test from "node:test";
+import assert from "node:assert/strict";
 
 // ---- minimal browser stubs -------------------------------------------------
 const storage = new Map();
-let playbackReply = { videoId: 'aaaaaaaaaaa', videoIds: ['aaaaaaaaaaa', 'bbbbbbbbbbb'] };
+let playbackReply = {
+  videoId: "aaaaaaaaaaa",
+  videoIds: ["aaaaaaaaaaa", "bbbbbbbbbbb"],
+};
+let playbackDelay = 0;
+let playbackRequests = 0;
 globalThis.localStorage = {
   getItem: (key) => storage.get(key) ?? null,
   setItem: (key, value) => storage.set(key, String(value)),
 };
-globalThis.fetch = async () => new Response(JSON.stringify(playbackReply));
-globalThis.location = { origin: 'https://example.test' };
+globalThis.fetch = async () => {
+  playbackRequests++;
+  if (playbackDelay)
+    await new Promise((resolve) => setTimeout(resolve, playbackDelay));
+  return new Response(JSON.stringify(playbackReply));
+};
+globalThis.location = { origin: "https://example.test" };
 globalThis.window = globalThis;
-Object.defineProperty(globalThis, 'navigator', { value: { mediaSession: {} }, configurable: true });
+Object.defineProperty(globalThis, "navigator", {
+  value: { mediaSession: {} },
+  configurable: true,
+});
 
 const audios = [];
 class FakeAudio {
@@ -40,7 +53,7 @@ function element(tag) {
     children: [],
     attrs: {},
     isConnected: false,
-    className: '',
+    className: "",
     append(...items) {
       items.forEach((item) => {
         item.isConnected = true;
@@ -55,13 +68,13 @@ function element(tag) {
       node.isConnected = false;
       node.parent?.children.splice(node.parent.children.indexOf(node), 1);
     },
-    querySelector: () => element('div'),
+    querySelector: () => element("div"),
     replaceWith() {},
   };
   return node;
 }
-const body = element('body');
-const head = element('head');
+const body = element("body");
+const head = element("head");
 globalThis.document = { hidden: false, body, head, createElement: element };
 
 class FakePlayer {
@@ -70,6 +83,8 @@ class FakePlayer {
     this.id = id;
     this.options = options;
     this.loaded = [];
+    this.cued = [];
+    this.played = 0;
     this.muted = false;
     this.stopped = 0;
     FakePlayer.instances.push(this);
@@ -77,6 +92,9 @@ class FakePlayer {
   }
   loadVideoById(request) {
     this.loaded.push(request);
+  }
+  cueVideoById(request) {
+    this.cued.push(request);
   }
   mute() {
     this.muted = true;
@@ -96,7 +114,9 @@ class FakePlayer {
   getDuration() {
     return 200;
   }
-  playVideo() {}
+  playVideo() {
+    this.played++;
+  }
   pauseVideo() {}
   destroy() {}
 }
@@ -105,6 +125,8 @@ globalThis.YT = { Player: FakePlayer, PlayerState: { PLAYING: 1, ENDED: 0 } };
 let scenario = 0;
 async function freshAudio() {
   scenario++;
+  playbackDelay = 0;
+  playbackRequests = 0;
   audios.length = 0;
   FakePlayer.instances.length = 0;
   body.children.length = 0;
@@ -113,14 +135,19 @@ async function freshAudio() {
   delete globalThis.YT;
   globalThis.YT = { Player: FakePlayer, PlayerState: { PLAYING: 1, ENDED: 0 } };
   globalThis.onYouTubeIframeAPIReady = undefined;
-  const { createAudioComponents, updateAudioPresence } = await import(`../src/services/audio.js?case=${scenario}`);
+  const { createAudioComponents, updateAudioPresence } = await import(
+    `../src/services/audio.js?case=${scenario}`
+  );
   const React = {
-    createContext: () => ({ Provider: 'provider' }),
+    createContext: () => ({ Provider: "provider" }),
     useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
     useEffect: () => {},
     useContext: () => null,
   };
-  const { AudioProvider } = createAudioComponents(React, (_type, props) => props);
+  const { AudioProvider } = createAudioComponents(
+    React,
+    (_type, props) => props,
+  );
   const audio = () => AudioProvider({ children: null }).value;
   audio.updatePresence = updateAudioPresence;
   return audio;
@@ -128,60 +155,66 @@ async function freshAudio() {
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
 
-test('hidden engine: YouTube plays audio-only from the Spotify offset with no visible window', async () => {
+test("hidden engine: YouTube plays audio-only from the Spotify offset with no visible window", async () => {
   const audio = await freshAudio();
   audio().primePlayer();
   await settle();
-  const ok = await audio().playTrack('Song', 'Artist', 42, 'spotify');
+  const ok = await audio().playTrack("Song", "Artist", 42, "spotify");
   assert.equal(ok, true);
   const [engine] = FakePlayer.instances;
-  assert.equal(engine.options.width, '200');
+  assert.equal(engine.options.width, "200");
   assert.equal(engine.options.playerVars.controls, 0);
   assert.ok(engine.loaded[0].startSeconds >= 42);
-  assert.ok(body.children.some((node) => node.className === 'audio-engine'));
-  assert.ok(!body.children.some((node) => node.className === 'embedded-player'));
+  assert.ok(body.children.some((node) => node.className === "audio-engine"));
+  assert.ok(
+    !body.children.some((node) => node.className === "embedded-player"),
+  );
   audio().stopPlayback();
 });
 
-test('embed-blocked videos fall through to the next search result', async () => {
+test("embed-blocked videos fall through to the next search result", async () => {
   const audio = await freshAudio();
   audio().primePlayer();
   await settle();
-  await audio().playTrack('Song', 'Artist', 10, 'spotify');
+  await audio().playTrack("Song", "Artist", 10, "spotify");
   const [engine] = FakePlayer.instances;
   engine.options.events.onError();
   await settle();
-  assert.equal(engine.loaded.at(-1).videoId, 'bbbbbbbbbbb');
+  assert.equal(engine.loaded.at(-1).videoId, "bbbbbbbbbbb");
   audio().stopPlayback();
 });
 
-test('volume 0 mutes the streaming engine; raising it restores the selected level', async () => {
+test("volume 0 mutes the streaming engine; raising it restores the selected level", async () => {
   const audio = await freshAudio();
   audio().primePlayer();
   await settle();
   const [engine] = FakePlayer.instances;
   audio().setVolume(0);
   assert.equal(engine.muted, true);
-  assert.equal(await audio().playTrack('Song', 'Artist', 0, 'spotify'), false);
+  assert.equal(await audio().playTrack("Song", "Artist", 0, "spotify"), false);
   audio().setVolume(40);
   assert.equal(engine.muted, false);
   assert.equal(engine.volumeValue, 40);
-  assert.equal(await audio().playTrack('Song', 'Artist', 0, 'spotify'), true);
+  assert.equal(await audio().playTrack("Song", "Artist", 0, "spotify"), true);
   audio().stopPlayback();
 });
 
-test('entry and playback transitions never create or resume a local audio fallback', async () => {
+test("entry and playback transitions never create or resume a local audio fallback", async () => {
   const audio = await freshAudio();
   audio().primePlayer();
   audio.updatePresence({
     listening_to_spotify: true,
-    spotify: { song: 'Song', artist: 'Artist', timestamps: { end: Date.now() + 60000 } },
+    spotify: {
+      song: "Song",
+      artist: "Artist",
+      timestamps: { end: Date.now() + 60000 },
+    },
   });
   audio().setVolume(70);
   audio().resumeAfterExternalMedia();
   await settle();
   assert.equal(FakePlayer.instances[0].loaded.length, 0);
-  await audio().playTrack('Song', 'Artist', 0, 'spotify');
+  await audio().playTrack("Song", "Artist", 0, "spotify");
   audio().stopPlayback();
   audio.updatePresence({ listening_to_spotify: false });
   audio().setClipPlaybackActive(true);
@@ -189,17 +222,17 @@ test('entry and playback transitions never create or resume a local audio fallba
   audio().pauseForExternalMedia();
   audio().resumeAfterExternalMedia();
   assert.equal(audios.length, 0);
-  assert.equal(audio().playbackSource, 'none');
+  assert.equal(audio().playbackSource, "none");
   audio().disableAudioForever();
 });
 
-test('enter without audio: nothing sounds, volume control is flagged hidden, engine never starts', async () => {
+test("enter without audio: nothing sounds, volume control is flagged hidden, engine never starts", async () => {
   const audio = await freshAudio();
   audio().disableAudioForever();
   assert.equal(audio().isAudioDisabled, true);
   assert.equal(audio().primePlayer(), false);
-  assert.equal(await audio().playTrack('Song', 'Artist', 0, 'spotify'), false);
-  assert.equal(await audio().playVideo('aaaaaaaaaaa', 0, 'manual'), false);
+  assert.equal(await audio().playTrack("Song", "Artist", 0, "spotify"), false);
+  assert.equal(await audio().playVideo("aaaaaaaaaaa", 0, "manual"), false);
   audio().setVolume(80);
   assert.notEqual(audio().volume, 80);
   assert.ok(audios.every((item) => item.plays === 0));
@@ -207,15 +240,87 @@ test('enter without audio: nothing sounds, volume control is flagged hidden, eng
   assert.equal(body.children.length, 0);
 });
 
-test('silent entry after audio was primed mutes everything already running', async () => {
+test("silent entry after audio was primed mutes everything already running", async () => {
   const audio = await freshAudio();
   audio().primePlayer();
   await settle();
-  await audio().playTrack('Song', 'Artist', 5, 'spotify');
+  await audio().playTrack("Song", "Artist", 5, "spotify");
   audio().disableAudioForever();
   const [engine] = FakePlayer.instances;
   assert.equal(engine.muted, true);
   assert.ok(engine.stopped > 0);
   assert.equal(audios.length, 0);
-  assert.equal(audio().playbackSource, 'none');
+  assert.equal(audio().playbackSource, "none");
+});
+
+test("prepared songs dispatch playback without another lookup or reloading the video", async () => {
+  const audio = await freshAudio();
+  const song = {
+    id: "recent:prepared",
+    trackName: "Prepared Song",
+    artistName: "Artist",
+  };
+  audio().primePlayer();
+  playbackDelay = 40;
+  assert.equal(await audio().prepareSong(song), true);
+  const [engine] = FakePlayer.instances;
+  assert.equal(engine.cued.length, 1);
+  assert.equal(engine.played, 0);
+  await audio().prepareSong(
+    { trackName: "Adjacent Song", artistName: "Artist" },
+    { cue: false },
+  );
+  assert.equal(engine.cued.length, 1);
+  engine.stopVideo = function () {
+    this.stopped++;
+    this.options.events.onStateChange({ data: 0 });
+  };
+  const requestsAfterPreparation = playbackRequests;
+  assert.equal(await audio().toggleSong(song), true);
+  assert.equal(playbackRequests, requestsAfterPreparation);
+  assert.equal(engine.loaded.length, 0);
+  assert.equal(engine.played, 1);
+  assert.equal(audio().manualPlaybackDetails.id, song.id);
+  assert.equal(audio().playbackSource, "manual");
+  await audio().toggleSong(song);
+  assert.equal(audio().playbackSource, "none");
+  assert.equal(engine.stopped, 1);
+  await audio().toggleSong(song);
+  assert.equal(engine.loaded.length, 1);
+  audio().stopPlayback();
+});
+
+test("Stop cancels a pending song so a delayed response cannot start it later", async () => {
+  const audio = await freshAudio();
+  audio().primePlayer();
+  await settle();
+  playbackDelay = 40;
+  const song = {
+    id: "recent:cancelled",
+    trackName: "Cancelled Song",
+    artistName: "Artist",
+  };
+  const pending = audio().toggleSong(song);
+  assert.equal(audio().isAudioLoading, true);
+  assert.equal(audio().playbackSource, "manual");
+  await audio().toggleSong(song);
+  assert.equal(await pending, false);
+  assert.equal(FakePlayer.instances[0].loaded.length, 0);
+  assert.equal(audio().playbackSource, "none");
+  assert.equal(audio().isAudioLoading, false);
+});
+
+test("preparing a different song never interrupts an active stream", async () => {
+  const audio = await freshAudio();
+  audio().primePlayer();
+  await audio().playTrack("Live Song", "Artist", 15, "spotify");
+  const [engine] = FakePlayer.instances;
+  await audio().prepareSong({
+    trackName: "Another Song",
+    artistName: "Artist",
+  });
+  assert.equal(engine.cued.length, 0);
+  assert.equal(engine.loaded.length, 1);
+  assert.equal(audio().playbackSource, "spotify");
+  audio().stopPlayback();
 });

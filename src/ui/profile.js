@@ -1,49 +1,34 @@
+import {parseVideoId, resolveTrack} from '../services/playback-cache.js';
+import {createRecentSongs} from './recent-songs.js';
+import {Radio as K, Pause as W, Play as G, Headphones as R, Expand as H} from './music-icons.js';
+import {playbackSong, isSelectedSong, statsTrackKey} from '../services/music-playback.js';
+
 import { profileFetch as fetch } from '../services/profile-api.js';
 import { activityGameKey, hasGameDetails } from '../services/game-info.js';
 import {
   C as e,
   S as t,
   T as n,
-  _ as r,
   a as i,
   b as motion,
   c as o,
   d as s,
   f as c,
-  g as l,
   h as u,
   i as d,
   l as f,
   m as useAudio,
-  n as m,
   o as h,
   p as g,
   r as _,
   s as v,
   t as y,
   u as b,
-  v as x,
   w as S,
   x as C,
   y as AnimatePresence,
 } from './runtime.js';
-var T = v(`ArrowUpRight`, [
-    [
-      `path`,
-      {
-        d: `M7 7h10v10`,
-        key: `1tivn9`,
-      },
-    ],
-    [
-      `path`,
-      {
-        d: `M7 17 17 7`,
-        key: `1vkiza`,
-      },
-    ],
-  ]),
-  E = v(`Building2`, [
+var E = v(`Building2`, [
     [
       `path`,
       {
@@ -379,15 +364,6 @@ var T = v(`ArrowUpRight`, [
       },
     ],
   ]),
-  R = v(`Headphones`, [
-    [
-      `path`,
-      {
-        d: `M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3`,
-        key: `1xhozi`,
-      },
-    ],
-  ]),
   z = v(`History`, [
     [
       `path`,
@@ -440,42 +416,6 @@ var T = v(`ArrowUpRight`, [
       },
     ],
   ]),
-  H = v(`Maximize2`, [
-    [
-      `polyline`,
-      {
-        points: `15 3 21 3 21 9`,
-        key: `mznyad`,
-      },
-    ],
-    [
-      `polyline`,
-      {
-        points: `9 21 3 21 3 15`,
-        key: `1avn1i`,
-      },
-    ],
-    [
-      `line`,
-      {
-        x1: `21`,
-        x2: `14`,
-        y1: `3`,
-        y2: `10`,
-        key: `ota7mn`,
-      },
-    ],
-    [
-      `line`,
-      {
-        x1: `3`,
-        x2: `10`,
-        y1: `21`,
-        y2: `14`,
-        key: `1atl0r`,
-      },
-    ],
-  ]),
   U = v(`Music2`, [
     [
       `circle`,
@@ -491,76 +431,6 @@ var T = v(`ArrowUpRight`, [
       {
         d: `M12 18V2l7 4`,
         key: `g04rme`,
-      },
-    ],
-  ]),
-  W = v(`Pause`, [
-    [
-      `rect`,
-      {
-        width: `4`,
-        height: `16`,
-        x: `6`,
-        y: `4`,
-        key: `iffhe4`,
-      },
-    ],
-    [
-      `rect`,
-      {
-        width: `4`,
-        height: `16`,
-        x: `14`,
-        y: `4`,
-        key: `sjin7j`,
-      },
-    ],
-  ]),
-  G = v(`Play`, [
-    [
-      `polygon`,
-      {
-        points: `5 3 19 12 5 21 5 3`,
-        key: `191637`,
-      },
-    ],
-  ]),
-  K = v(`Radio`, [
-    [
-      `path`,
-      {
-        d: `M4.9 19.1C1 15.2 1 8.8 4.9 4.9`,
-        key: `1vaf9d`,
-      },
-    ],
-    [
-      `path`,
-      {
-        d: `M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5`,
-        key: `u1ii0m`,
-      },
-    ],
-    [
-      `circle`,
-      {
-        cx: `12`,
-        cy: `12`,
-        r: `2`,
-        key: `1c9p78`,
-      },
-    ],
-    [
-      `path`,
-      {
-        d: `M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5`,
-        key: `1j5fej`,
-      },
-    ],
-    [
-      `path`,
-      {
-        d: `M19.1 4.9C23 8.8 23 15.1 19.1 19`,
-        key: `10b0cb`,
       },
     ],
   ]),
@@ -2112,16 +1982,7 @@ async function ut(e = !1) {
     st = null;
   }
 }
-function dt(e) {
-  let t = Math.max(0, Date.now() - e),
-    n = Math.floor(t / 6e4);
-  if (n < 1) return `just now`;
-  if (n < 60) return `${n}m ago`;
-  let r = Math.floor(n / 60);
-  if (r < 24) return `${r}h ago`;
-  let i = Math.floor(r / 24);
-  return i < 7 ? `${i}d ago` : `${Math.floor(i / 7)}w ago`;
-}
+
 var ft = ({ text: e, children: t }) =>
     (0, jsxRuntime.jsxs)(`div`, {
       className: `relative group`,
@@ -2285,12 +2146,8 @@ function Ot(e) {
     ? `Ranked by Spotify`
     : `${e.minutes == null ? `—` : bt(e.minutes)} minutes / ${e.streams == null ? `—` : bt(e.streams)} streams`;
 }
-function kt(e) {
-  return [e.id, e.name, e.artists.join(`,`)].join(`::`);
-}
-function At(e) {
-  return e.artists.join(`, `);
-}
+
+
 var jt = ({ action: e, src: t, label: n, icon: r }) =>
     (0, jsxRuntime.jsxs)(`div`, {
       className: `music-artwork`,
@@ -2307,36 +2164,22 @@ var jt = ({ action: e, src: t, label: n, icon: r }) =>
         e,
       ],
     }),
-  Mt = ({ playback: e, track: t }) => {
-    let n = kt(t),
-      r = e.loadingTrackId === n,
-      i = e.activeTrackId === n && e.playbackSource === `manual` && e.isAudioPlaying,
-      a = e.unavailableTrackIds.has(n),
-      o = a ? `${t.name} is unavailable` : i ? `Pause ${t.name}` : `Play ${t.name}`;
-    return (0, jsxRuntime.jsx)(`button`, {
-      type: `button`,
-      className: `music-track-playback${i ? ` is-playing` : ``}${a ? ` is-unavailable` : ``}`,
-      'aria-label': o,
-      title: o,
-      disabled: r || a,
-      onPointerEnter: () => e.onPrepareTrack(t),
-      onFocus: () => e.onPrepareTrack(t),
-      onClick: (n) => {
-        (n.stopPropagation(), e.onToggleTrack(t));
+  Mt = ({ playback, track }) => {
+        const key = statsTrackKey(track);
+        const selected = playback.activeTrackId === key && playback.playbackSource === 'manual';
+        const label = (selected ? 'Stop ' : 'Play ') + track.name;
+        return jsxRuntime.jsx('button', {
+          type: 'button',
+          className: 'music-track-playback' + (selected ? ' is-playing' : ''),
+          'aria-label': label,
+          title: label,
+          disabled: playback.isAudioDisabled,
+          onPointerEnter: () => playback.onPrepareTrack(track),
+          onFocus: () => playback.onPrepareTrack(track),
+          onClick: event => { event.stopPropagation(); playback.onToggleTrack(track); },
+          children: jsxRuntime.jsx(selected ? W : G, { className: 'h-4 w-4 fill-current' }),
+        });
       },
-      children: r
-        ? (0, jsxRuntime.jsx)(B, {
-            className: `h-4 w-4 animate-spin`,
-          })
-        : i
-          ? (0, jsxRuntime.jsx)(W, {
-              className: `h-4 w-4 fill-current`,
-            })
-          : (0, jsxRuntime.jsx)(G, {
-              className: `h-4 w-4 fill-current`,
-            }),
-    });
-  },
   Nt = ({ item: e, playback: t, type: n }) =>
     (0, jsxRuntime.jsx)(jt, {
       src: e.image,
@@ -2780,883 +2623,328 @@ var ListeningClock = ({ payload: e }) => {
       ],
     });
   },
-  MusicStats = ({ isModal: e = !1, onClose: t }) => {
-    let {
-        isAudioPlaying: n,
-        isPlayerPrimingReady: i,
-        manualPlaybackDetails: o,
-        playTrack: s,
-        playbackSource: c,
-        setManualPlaybackDetails: l,
-        stopPlayback: u,
-      } = useAudio(),
-      [d, f] = (0, React.useState)(`weeks`),
-      [m, g] = (0, React.useState)(null),
-      [_, v] = (0, React.useState)(!0),
-      [y, b] = (0, React.useState)(null),
-      [x, S] = (0, React.useState)(null),
-      [C, T] = (0, React.useState)(null),
-      [E, D] = (0, React.useState)(null),
-      [O, k] = (0, React.useState)(() => new Set()),
-      A = m?.topTracks[0] ?? null;
-    const [category, setCategory] = React.useState('track');
-    const [albumLoading, setAlbumLoading] = React.useState(false);
-    const [albumError, setAlbumError] = React.useState(null);
-    React.useEffect(() => {
-      if (category !== 'album' || !m || m.range.id !== d || m.albumsLoaded) return;
-      let cancelled = false;
-      setAlbumLoading(true);
-      setAlbumError(null);
-      fetch(`/.netlify/functions/getStatsfmAlbums?range=${encodeURIComponent(d)}`)
-        .then(async (response) => {
-          if (!response.ok)
-            throw new Error(
-              'Albums are unavailable. Check that streaming history is shared on stats.fm.',
-            );
-          return response.json();
-        })
-        .then((albums) => {
-          if (!cancelled)
-            g((current) =>
-              current?.range.id === d
-                ? {
-                    ...current,
-                    topAlbums: albums,
-                    albumsLoaded: true,
-                  }
-                : current,
-            );
-        })
-        .catch((error) => {
-          if (!cancelled) setAlbumError(error.message);
-        })
-        .finally(() => {
-          if (!cancelled) setAlbumLoading(false);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, [category, d, m?.range.id, m?.albumsLoaded]);
-    ((0, React.useEffect)(() => {
-      c !== `manual` && T(null);
-    }, [c]),
-      (0, React.useEffect)(() => {
-        let e = !1;
-        return (
-          v(!0),
-          b(null),
-          S(null),
-          k(new Set()),
-          loadMusicStats(d)
-            .then((t) => {
-              e || g(t);
-            })
-            .catch((t) => {
-              e || b(t instanceof Error ? t.message : `music stats failed to load`);
-            })
-            .finally(() => {
-              e || v(!1);
-            }),
-          () => {
-            e = !0;
-          }
-        );
-      }, [d]));
-    let j = () => {
-        (v(!0),
-          b(null),
-          loadMusicStats(d, !0)
-            .then(g)
-            .catch((e) => {
-              b(e instanceof Error ? e.message : `music stats failed to load`);
-            })
-            .finally(() => v(!1)));
+  MusicStats = ({ isModal = false, onClose }) => {
+  const playbackAudio = useAudio();
+  let [range, setRange] = React.useState(`weeks`),
+    [stats, setStats] = React.useState(null),
+    [isLoading, setLoading] = React.useState(true),
+    [error, setError] = React.useState(null),
+    [gridType, setGridType] = React.useState(null),
+    topTrack = stats?.topTracks[0] ?? null;
+  const [category, setCategory] = React.useState('track');
+  const [albumLoading, setAlbumLoading] = React.useState(false);
+  const [albumError, setAlbumError] = React.useState(null);
+  React.useEffect(() => {
+    if (category !== 'album' || !stats || stats.range.id !== range || stats.albumsLoaded) return;
+    let cancelled = false;
+    setAlbumLoading(true);
+    setAlbumError(null);
+    fetch(`/.netlify/functions/getStatsfmAlbums?range=${encodeURIComponent(range)}`).then(async response => {
+      if (!response.ok) throw new Error('Albums are unavailable. Check that streaming history is shared on stats.fm.');
+      return response.json();
+    }).then(albums => {
+      if (!cancelled) setStats(current => current?.range.id === range ? {
+        ...current,
+        topAlbums: albums,
+        albumsLoaded: true
+      } : current);
+    }).catch(error => {
+      if (!cancelled) setAlbumError(error.message);
+    }).finally(() => {
+      if (!cancelled) setAlbumLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [category, range, stats?.range.id, stats?.albumsLoaded]);
+  React.useEffect(() => {
+    let e = false;
+    setLoading(true);
+    setError(null);
+    setGridType(null);
+    loadMusicStats(range).then(t => {
+      e || setStats(t);
+    }).catch(t => {
+      e || setError(t instanceof Error ? t.message : `music stats failed to load`);
+    }).finally(() => {
+      e || setLoading(false);
+    });
+    return () => {
+      e = true;
+    };
+  }, [range]);
+  let reloadStats = () => {
+      setLoading(true);
+      setError(null);
+      loadMusicStats(range, true).then(setStats).catch(e => {
+        setError(e instanceof Error ? e.message : `music stats failed to load`);
+      }).finally(() => setLoading(false));
+    },
+    playback = {
+      activeTrackId: playbackAudio.manualPlaybackDetails?.id?.replace(/^statsfm:/, ''),
+      isAudioDisabled: playbackAudio.isAudioDisabled,
+      playbackSource: playbackAudio.playbackSource,
+      onToggleTrack: track => {
+        void playbackAudio.toggleSong(playbackSong(track));
       },
-      M = {
-        activeTrackId: C,
-        loadingTrackId: E,
-        unavailableTrackIds: O,
-        isAudioPlaying: n,
-        playbackSource: c,
-        onToggleTrack: (e) => {
-          let t = kt(e);
-          if (C === t && c === `manual` && n) {
-            (u({
-              resumeSpotify: !0,
-            }),
-              T(null));
-            return;
-          }
-          let r = At(e),
-            a = o,
-            d = {
-              id: `statsfm:${t}`,
-              trackName: e.name,
-              artistName: r,
-              albumName: e.album,
-              spotifyUrl: e.spotifyUrl,
-              albumArtUrl: e.image ?? void 0,
-            };
-          (T(t),
-            D(t),
-            l(d),
-            k((e) => {
-              if (!e.has(t)) return e;
-              let n = new Set(e);
-              return (n.delete(t), n);
-            }),
-            s(e.name, r, 0, `manual`)
-              .then((e) => {
-                e ||
-                  !i ||
-                  (T((e) => (e === t ? null : e)),
-                  l((e) => (e?.id === d.id ? a : e)),
-                  k((e) => new Set(e).add(t)));
-              })
-              .finally(() => {
-                D((e) => (e === t ? null : e));
-              }));
-        },
-        onPrepareTrack: (e) => {
-          let t = At(e);
-          r(`${e.name} ${t} audio`, {
-            track: e.name,
-            artist: t,
-          });
-        },
-      },
-      N = (0, jsxRuntime.jsxs)(`section`, {
-        className: `music-page${e ? ` music-page--modal` : ``}`,
-        'aria-label': `Music stats`,
-        children: [
-          (0, jsxRuntime.jsxs)(`div`, {
-            className: `music-hero`,
-            children: [
-              (0, jsxRuntime.jsxs)(`div`, {
-                className: `music-hero__profile`,
-                children: [
-                  (0, jsxRuntime.jsx)(jt, {
-                    src: m?.profile.image ?? A?.image ?? null,
-                    label: m?.profile.displayName ?? `stats.fm profile`,
-                    icon: (0, jsxRuntime.jsx)(U, {
-                      className: `h-6 w-6`,
-                    }),
-                  }),
-                  (0, jsxRuntime.jsxs)(`div`, {
-                    children: [
-                      (0, jsxRuntime.jsx)(`p`, {
-                        className: `page-eyebrow`,
-                        children: `stats.fm`,
-                      }),
-                      (0, jsxRuntime.jsx)(`h1`, {
-                        children: m?.profile.displayName ?? `music`,
-                      }),
-                      (0, jsxRuntime.jsx)(`span`, {
-                        children: m
-                          ? (0, jsxRuntime.jsx)(`a`, {
-                              href: `https://stats.fm/31esju7gpv3nvyqglogd3mqyczd4`,
-                              target: `_blank`,
-                              rel: `noopener noreferrer`,
-                              children: `@${m.profile.handle} on stats.fm${m.cached ? ` · saved stats` : ``}`,
-                            })
-                          : `loading listening history`,
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-              (0, jsxRuntime.jsxs)(`div`, {
-                className: `music-hero__actions`,
-                children: [
-                  (0, jsxRuntime.jsx)(`div`, {
-                    className: `music-range-switcher`,
-                    'aria-label': `Music stats range`,
-                    children: vt.map((e) =>
-                      (0, jsxRuntime.jsx)(
-                        `button`,
-                        {
-                          type: `button`,
-                          className: e.id === d ? `is-active` : ``,
-                          onClick: () => f(e.id),
-                          children: e.label,
-                        },
-                        e.id,
-                      ),
-                    ),
-                  }),
-                  (0, jsxRuntime.jsx)(`button`, {
-                    type: `button`,
-                    className: `music-icon-button`,
-                    onClick: j,
-                    'aria-label': `Refresh music stats`,
-                    children: _
-                      ? (0, jsxRuntime.jsx)(B, {
-                          className: `h-4 w-4 animate-spin`,
-                        })
-                      : (0, jsxRuntime.jsx)(te, {
-                          className: `h-4 w-4`,
-                        }),
-                  }),
-                  e && t
-                    ? (0, jsxRuntime.jsx)(`button`, {
-                        type: `button`,
-                        className: `music-icon-button`,
-                        onClick: t,
-                        'aria-label': `Close music stats`,
-                        children: (0, jsxRuntime.jsx)(h, {
-                          className: `h-4 w-4`,
-                        }),
-                      })
-                    : null,
-                ],
-              }),
-            ],
-          }),
-          y
-            ? (0, jsxRuntime.jsxs)(`section`, {
-                className: `profile-empty-state`,
-                children: [
-                  (0, jsxRuntime.jsx)(`p`, {
-                    children: y,
-                  }),
-                  (0, jsxRuntime.jsx)(`button`, {
-                    type: `button`,
-                    onClick: j,
-                    children: `retry`,
-                  }),
-                ],
-              })
-            : null,
-          (0, jsxRuntime.jsx)(AnimatePresence, {
-            mode: `wait`,
-            children:
-              !y && m
-                ? (0, jsxRuntime.jsxs)(
-                    motion.div,
-                    {
-                      className: `music-content`,
-                      initial: {
-                        opacity: 0,
-                        y: 10,
-                      },
-                      animate: {
-                        opacity: 1,
-                        y: 0,
-                      },
-                      exit: {
-                        opacity: 0,
-                        y: -6,
-                      },
-                      transition: {
-                        duration: 0.22,
-                        ease: `easeOut`,
-                      },
-                      children: [
-                        (0, jsxRuntime.jsx)(`section`, {
-                          className: `music-summary`,
-                          children: (0, jsxRuntime.jsxs)(`div`, {
-                            className: `music-summary__track`,
-                            children: [
-                              (0, jsxRuntime.jsx)(jt, {
-                                src: A?.image ?? null,
-                                label: A?.name ?? `top track`,
-                                icon: (0, jsxRuntime.jsx)(U, {
-                                  className: `h-6 w-6`,
-                                }),
-                              }),
-                              (0, jsxRuntime.jsxs)(`div`, {
-                                children: [
-                                  (0, jsxRuntime.jsxs)(`span`, {
-                                    children: [`top track / `, m.range.label],
-                                  }),
-                                  (0, jsxRuntime.jsx)(`strong`, {
-                                    children: A?.name ?? `No top track yet`,
-                                  }),
-                                  (0, jsxRuntime.jsx)(`p`, {
-                                    children: A
-                                      ? Tt(A)
-                                      : `stats.fm has not returned a track for this range.`,
-                                  }),
-                                ],
-                              }),
-                            ],
-                          }),
-                        }),
-                        (0, jsxRuntime.jsxs)(`section`, {
-                          className: `music-stat-grid`,
-                          'aria-label': `Music stat totals`,
-                          children: [
-                            yt.map((e) => {
-                              let t = e.icon,
-                                n = m.totals[e.key];
-                              return (0, jsxRuntime.jsxs)(
-                                `div`,
-                                {
-                                  className: `music-stat`,
-                                  children: [
-                                    (0, jsxRuntime.jsx)(t, {
-                                      className: `h-4 w-4`,
-                                    }),
-                                    (0, jsxRuntime.jsx)(`strong`, {
-                                      children: n,
-                                    }),
-                                    (0, jsxRuntime.jsx)(`span`, {
-                                      children: e.label,
-                                    }),
-                                  ],
-                                },
-                                e.key,
-                              );
-                            }),
-                            (0, jsxRuntime.jsxs)(`div`, {
-                              className: `music-stat music-stat--daily-average`,
-                              children: [
-                                (0, jsxRuntime.jsx)(q, {
-                                  className: `h-4 w-4`,
-                                }),
-                                (0, jsxRuntime.jsx)(`strong`, {
-                                  children: m.totals.dailyAverageText,
-                                }),
-                                (0, jsxRuntime.jsx)(`span`, {
-                                  children: `daily avg`,
-                                }),
-                              ],
-                            }),
-                          ],
-                        }),
-                        (0, jsxRuntime.jsx)(ListeningClock, {
-                          payload: m,
-                        }),
-                        jsxRuntime.jsxs('section', {
-                          className: 'music-rankings',
-                          children: [
-                            jsxRuntime.jsx('nav', {
-                              className: 'music-category-tabs',
-                              'aria-label': 'Music rankings',
-                              children: [
-                                ['track', 'Tracks'],
-                                ['artist', 'Artists'],
-                                ['album', 'Albums'],
-                              ].map(([key, label]) =>
-                                jsxRuntime.jsx(
-                                  'button',
-                                  {
-                                    type: 'button',
-                                    'aria-pressed': category === key,
-                                    onClick: () => setCategory(key),
-                                    children: label,
-                                  },
-                                  key,
-                                ),
-                              ),
-                            }),
-                            jsxRuntime.jsx(AnimatePresence, {
-                              mode: 'wait',
-                              initial: false,
-                              children: jsxRuntime.jsx(
-                                motion.div,
-                                {
-                                  initial: {
-                                    opacity: 0,
-                                    y: 10,
-                                    filter: 'blur(5px)',
-                                  },
-                                  animate: {
-                                    opacity: 1,
-                                    y: 0,
-                                    filter: 'blur(0px)',
-                                  },
-                                  exit: {
-                                    opacity: 0,
-                                    y: -6,
-                                    filter: 'blur(4px)',
-                                  },
-                                  transition: {
-                                    duration: 0.22,
-                                    ease: [0.22, 1, 0.36, 1],
-                                  },
-                                  children:
-                                    category === 'album' && (albumLoading || albumError)
-                                      ? jsxRuntime.jsx('p', {
-                                          className: 'music-empty-line',
-                                          role: 'status',
-                                          children: albumLoading ? 'Loading albums…' : albumError,
-                                        })
-                                      : jsxRuntime.jsx(MusicCarousel, {
-                                          title: `Top ${category === 'artist' ? 'Artists' : category === 'album' ? 'Albums' : 'Tracks'}`,
-                                          description: `My top ${category}s from ${m.range.label.toLowerCase()}`,
-                                          items: getRankedItems(m, category),
-                                          playback: M,
-                                          type: category,
-                                          onOpenGrid: () => S(category),
-                                        }),
-                                },
-                                category,
-                              ),
-                            }),
-                          ],
-                        }),
-                        (0, jsxRuntime.jsx)(MusicGridDialog, {
-                          category: x,
-                          items: x ? getRankedItems(m, x) : [],
-                          onClose: () => S(null),
-                          playback: M,
-                        }),
-                      ],
-                    },
-                    m.range.id,
-                  )
-                : y
-                  ? null
-                  : (0, jsxRuntime.jsxs)(
-                      motion.section,
-                      {
-                        className: `profile-loading music-loading`,
-                        initial: {
-                          opacity: 0,
-                        },
-                        animate: {
-                          opacity: 1,
-                        },
-                        exit: {
-                          opacity: 0,
-                        },
-                        children: [
-                          (0, jsxRuntime.jsx)(`span`, {}),
-                          (0, jsxRuntime.jsx)(`span`, {}),
-                          (0, jsxRuntime.jsx)(`span`, {}),
-                        ],
-                      },
-                      `loading`,
-                    ),
-          }),
-        ],
-      });
-    return e
-      ? (0, ve.createPortal)(
-          (0, jsxRuntime.jsxs)(motion.div, {
-            className: `music-stats-modal`,
-            role: `dialog`,
-            'aria-modal': `true`,
-            'aria-label': `Music stats`,
-            initial: {
-              opacity: 0,
-            },
-            animate: {
-              opacity: 1,
-            },
-            exit: {
-              opacity: 0,
-            },
-            transition: {
-              duration: 0.18,
-              ease: `easeOut`,
-            },
-            children: [
-              (0, jsxRuntime.jsx)(`button`, {
-                type: `button`,
-                className: `music-stats-modal__backdrop`,
-                'aria-label': `Close music stats`,
-                onClick: t,
-              }),
-              (0, jsxRuntime.jsx)(motion.div, {
-                className: `music-stats-modal__panel`,
+      onPrepareTrack: track => {
+        void playbackAudio.prepareSong(playbackSong(track));
+      }
+    },
+    content = jsxRuntime.jsxs(`section`, {
+      className: `music-page${isModal ? ` music-page--modal` : ``}`,
+      'aria-label': `Music stats`,
+      children: [jsxRuntime.jsxs(`div`, {
+        className: `music-hero`,
+        children: [jsxRuntime.jsxs(`div`, {
+          className: `music-hero__profile`,
+          children: [jsxRuntime.jsx(jt, {
+            src: stats?.profile.image ?? topTrack?.image ?? null,
+            label: stats?.profile.displayName ?? `stats.fm profile`,
+            icon: jsxRuntime.jsx(U, {
+              className: `h-6 w-6`
+            })
+          }), jsxRuntime.jsxs(`div`, {
+            children: [jsxRuntime.jsx(`p`, {
+              className: `page-eyebrow`,
+              children: `stats.fm`
+            }), jsxRuntime.jsx(`h1`, {
+              children: stats?.profile.displayName ?? `music`
+            }), jsxRuntime.jsx(`span`, {
+              children: stats ? jsxRuntime.jsx(`a`, {
+                href: `https://stats.fm/31esju7gpv3nvyqglogd3mqyczd4`,
+                target: `_blank`,
+                rel: `noopener noreferrer`,
+                children: `@${stats.profile.handle} on stats.fm${stats.cached ? ` · saved stats` : ``}`
+              }) : `loading listening history`
+            })]
+          })]
+        }), jsxRuntime.jsxs(`div`, {
+          className: `music-hero__actions`,
+          children: [jsxRuntime.jsx(`div`, {
+            className: `music-range-switcher`,
+            'aria-label': `Music stats range`,
+            children: vt.map(e => jsxRuntime.jsx(`button`, {
+              type: `button`,
+              className: e.id === range ? `is-active` : ``,
+              onClick: () => setRange(e.id),
+              children: e.label
+            }, e.id))
+          }), jsxRuntime.jsx(`button`, {
+            type: `button`,
+            className: `music-icon-button`,
+            onClick: reloadStats,
+            'aria-label': `Refresh music stats`,
+            children: isLoading ? jsxRuntime.jsx(B, {
+              className: `h-4 w-4 animate-spin`
+            }) : jsxRuntime.jsx(te, {
+              className: `h-4 w-4`
+            })
+          }), isModal && onClose ? jsxRuntime.jsx(`button`, {
+            type: `button`,
+            className: `music-icon-button`,
+            onClick: onClose,
+            'aria-label': `Close music stats`,
+            children: jsxRuntime.jsx(h, {
+              className: `h-4 w-4`
+            })
+          }) : null]
+        })]
+      }), error ? jsxRuntime.jsxs(`section`, {
+        className: `profile-empty-state`,
+        children: [jsxRuntime.jsx(`p`, {
+          children: error
+        }), jsxRuntime.jsx(`button`, {
+          type: `button`,
+          onClick: reloadStats,
+          children: `retry`
+        })]
+      }) : null, jsxRuntime.jsx(AnimatePresence, {
+        mode: `wait`,
+        children: !error && stats ? jsxRuntime.jsxs(motion.div, {
+          className: `music-content`,
+          initial: {
+            opacity: 0,
+            y: 10
+          },
+          animate: {
+            opacity: 1,
+            y: 0
+          },
+          exit: {
+            opacity: 0,
+            y: -6
+          },
+          transition: {
+            duration: 0.22,
+            ease: `easeOut`
+          },
+          children: [jsxRuntime.jsx(`section`, {
+            className: `music-summary`,
+            children: jsxRuntime.jsxs(`div`, {
+              className: `music-summary__track`,
+              children: [jsxRuntime.jsx(jt, {
+                src: topTrack?.image ?? null,
+                label: topTrack?.name ?? `top track`,
+                icon: jsxRuntime.jsx(U, {
+                  className: `h-6 w-6`
+                })
+              }), jsxRuntime.jsxs(`div`, {
+                children: [jsxRuntime.jsxs(`span`, {
+                  children: [`top track / `, stats.range.label]
+                }), jsxRuntime.jsx(`strong`, {
+                  children: topTrack?.name ?? `No top track yet`
+                }), jsxRuntime.jsx(`p`, {
+                  children: topTrack ? Tt(topTrack) : `stats.fm has not returned a track for this range.`
+                })]
+              })]
+            })
+          }), jsxRuntime.jsxs(`section`, {
+            className: `music-stat-grid`,
+            'aria-label': `Music stat totals`,
+            children: [yt.map(e => {
+              let t = e.icon,
+                n = stats.totals[e.key];
+              return jsxRuntime.jsxs(`div`, {
+                className: `music-stat`,
+                children: [jsxRuntime.jsx(t, {
+                  className: `h-4 w-4`
+                }), jsxRuntime.jsx(`strong`, {
+                  children: n
+                }), jsxRuntime.jsx(`span`, {
+                  children: e.label
+                })]
+              }, e.key);
+            }), jsxRuntime.jsxs(`div`, {
+              className: `music-stat music-stat--daily-average`,
+              children: [jsxRuntime.jsx(q, {
+                className: `h-4 w-4`
+              }), jsxRuntime.jsx(`strong`, {
+                children: stats.totals.dailyAverageText
+              }), jsxRuntime.jsx(`span`, {
+                children: `daily avg`
+              })]
+            })]
+          }), jsxRuntime.jsx(ListeningClock, {
+            payload: stats
+          }), jsxRuntime.jsxs('section', {
+            className: 'music-rankings',
+            children: [jsxRuntime.jsx('nav', {
+              className: 'music-category-tabs',
+              'aria-label': 'Music rankings',
+              children: [['track', 'Tracks'], ['artist', 'Artists'], ['album', 'Albums']].map(([key, label]) => jsxRuntime.jsx('button', {
+                type: 'button',
+                'aria-pressed': category === key,
+                onClick: () => setCategory(key),
+                children: label
+              }, key))
+            }), jsxRuntime.jsx(AnimatePresence, {
+              mode: 'wait',
+              initial: false,
+              children: jsxRuntime.jsx(motion.div, {
                 initial: {
                   opacity: 0,
-                  scale: 0.96,
-                  y: 16,
+                  y: 10,
+                  filter: 'blur(5px)'
                 },
                 animate: {
                   opacity: 1,
-                  scale: 1,
                   y: 0,
+                  filter: 'blur(0px)'
                 },
                 exit: {
                   opacity: 0,
-                  scale: 0.96,
-                  y: 16,
+                  y: -6,
+                  filter: 'blur(4px)'
                 },
                 transition: {
                   duration: 0.22,
-                  ease: `easeOut`,
+                  ease: [0.22, 1, 0.36, 1]
                 },
-                children: N,
-              }),
-            ],
-          }),
-          document.body,
-        )
-      : N;
-  },
-  Vt = {
-    hidden: {
-      opacity: 0,
-      y: 12,
-    },
-    show: {
-      opacity: 1,
-      y: 0,
-    },
-  },
-  Ht = {
-    background: `
-    radial-gradient(circle at top left, rgb(var(--p-50) / 0.08), transparent 35%),
-    linear-gradient(180deg, rgb(var(--glass-base) / 0.62), rgb(var(--p-950) / 0.8))
-  `,
-  },
-  Ut = {
-    background: `linear-gradient(180deg, rgb(var(--theme-rgb) / 0.34), rgb(var(--p-950) / 0.92))`,
-  },
-  Wt = {
-    background: `
-    linear-gradient(180deg, rgb(2 2 6 / 0.08), rgb(var(--glass-base) / 0.24), rgb(var(--p-950) / 0.92))
-  `,
-  },
-  Gt = {
-    background: `radial-gradient(circle at top, rgb(var(--p-50) / 0.18), transparent 32%)`,
-  },
-  RecentSongs = ({ songs: e }) => {
-    let [t, n] = (0, React.useState)(null),
-      [r, i] = (0, React.useState)(() => new Set()),
-      [o, s] = (0, React.useState)(!1),
-      {
-        playVideo: c,
-        playTrack: playRecentTrack,
-        stopPlayback: u,
-        playbackSource: d,
-        activeVideoId: f,
-        isAudioPlaying: m,
-        isPlayerPrimingReady: h,
-        manualPlaybackDetails: g,
-        setManualPlaybackDetails: _,
-      } = useAudio(),
-      v = (0, React.useMemo)(() => e.slice(0, 20), [e]),
-      y = (0, React.useMemo)(() => v.slice(0, 10), [v]),
-      b = (0, React.useMemo)(() => v.slice(10, 20), [v]);
-    if (
-      ((0, React.useEffect)(() => {
-        if (v.length === 0) {
-          n(null);
-          return;
-        }
-        n((e) => (e && v.some((t) => t.id === e) ? e : v[0].id));
-      }, [v]),
-      (0, React.useEffect)(() => {
-        i((e) => {
-          if (e.size === 0) return e;
-          let t = new Set(v.map((e) => e.id)),
-            n = new Set();
-          for (let r of e) t.has(r) && n.add(r);
-          return n.size === e.size ? e : n;
-        });
-      }, [v]),
-      v.length === 0)
-    )
-      return null;
-    let x = (e) => {
-        i((t) => {
-          if (t.has(e)) return t;
-          let n = new Set(t);
-          return (n.add(e), n);
-        });
-      },
-      S = async (song) => {
-        const key = `recent:${song.id}`;
-        if (d === 'manual' && g?.id === key) {
-          u({
-            resumeSpotify: true,
-          });
-          return;
-        }
-        n(song.id);
-        _({
-          id: key,
-          trackName: song.trackName,
-          artistName: song.artistName,
-          albumName: song.albumName,
-          albumArtUrl: song.albumArtUrl,
-          spotifyUrl: song.spotifyUrl,
-        });
-        if (song.youtubeUrl) await c(song.youtubeUrl, 0, 'manual');
-        else await playRecentTrack(song.trackName, song.artistName, 0, 'manual');
-      },
-      C = (e, t = !1) => {
-        let n = l(e.youtubeUrl || ``),
-          r = d === `manual` && f === n && m;
-        return (0, jsxRuntime.jsxs)(jsxRuntime.Fragment, {
-          children: [
-            (0, jsxRuntime.jsxs)(motion.div, {
-              variants: Vt,
-              className: `flex items-start justify-between gap-3`,
-              children: [
-                (0, jsxRuntime.jsxs)(`div`, {
-                  className: `inline-flex items-center gap-2 text-[11px] text-purple-200/60`,
-                  children: [
-                    (0, jsxRuntime.jsx)(K, {
-                      className: `h-3 w-3 text-purple-300/50`,
-                    }),
-                    (0, jsxRuntime.jsx)(`span`, {
-                      children: dt(e.listenedAt),
-                    }),
-                  ],
-                }),
-                (0, jsxRuntime.jsxs)(`button`, {
-                  type: `button`,
-                  onClick: (t) => {
-                    (t.stopPropagation(), S(e));
-                  },
-                  disabled: !n && !e.spotifyUrl,
-                  title: `Play ${e.trackName}`,
-                  className: `inline-flex items-center gap-2 border-b pb-0.5 text-[11px] font-medium transition-colors ${n || e.spotifyUrl ? `border-purple-300/24 text-purple-50 hover:border-purple-300/45` : `cursor-not-allowed border-purple-400/[0.08] text-purple-300/35`}`,
-                  children: [
-                    r
-                      ? (0, jsxRuntime.jsx)(W, {
-                          className: `h-3.5 w-3.5`,
-                        })
-                      : (0, jsxRuntime.jsx)(G, {
-                          className: `h-3.5 w-3.5 fill-current`,
-                        }),
-                    (0, jsxRuntime.jsx)(`span`, {
-                      children: n ? (r ? `Pause` : `Play`) : e.spotifyUrl ? `Play` : `Unavailable`,
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            (0, jsxRuntime.jsxs)(motion.div, {
-              variants: Vt,
-              className: `space-y-1.5`,
-              children: [
-                (0, jsxRuntime.jsx)(`h3`, {
-                  className: `${t ? `text-xl` : `text-2xl`} max-w-[24rem] font-semibold text-white [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden`,
-                  children: e.trackName,
-                }),
-                (0, jsxRuntime.jsx)(`p`, {
-                  className: `text-sm text-purple-100/80`,
-                  children: e.artistName,
-                }),
-                e.albumName &&
-                  (0, jsxRuntime.jsx)(`p`, {
-                    className: `max-w-[24rem] text-[12px] text-purple-200/45 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:1] overflow-hidden`,
-                    children: e.albumName,
-                  }),
-              ],
-            }),
-            e.tags.length > 0 &&
-              (0, jsxRuntime.jsx)(motion.div, {
-                variants: Vt,
-                className: `flex flex-wrap gap-2`,
-                children: e.tags.slice(0, t ? 3 : 4).map((t) =>
-                  (0, jsxRuntime.jsx)(
-                    `span`,
-                    {
-                      className: `border-l border-purple-200/14 pl-2 text-[10px] uppercase tracking-[0.16em] text-purple-100/65 first:border-l-0 first:pl-0`,
-                      children: t,
-                    },
-                    `${e.id}-${t}`,
-                  ),
-                ),
-              }),
-          ],
-        });
-      };
-    return (0, jsxRuntime.jsxs)(`section`, {
-      className: `surface-panel flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden rounded-xl border border-purple-400/[0.08] p-4 sm:p-5`,
-      style: Ht,
-      children: [
-        (0, jsxRuntime.jsxs)(`div`, {
-          className: `mb-4 flex items-start justify-between gap-4`,
-          children: [
-            (0, jsxRuntime.jsxs)(`div`, {
-              children: [
-                (0, jsxRuntime.jsxs)(`div`, {
-                  className: `mb-2 flex items-center gap-2`,
-                  children: [
-                    (0, jsxRuntime.jsx)(R, {
-                      className: `h-4 w-4 text-purple-300/55`,
-                    }),
-                    (0, jsxRuntime.jsx)(`h3`, {
-                      className: `text-xs font-semibold uppercase tracking-[0.24em] text-purple-300/55`,
-                      children: `What I've been listening to`,
-                    }),
-                  ],
-                }),
-                (0, jsxRuntime.jsx)(`p`, {
-                  className: `max-w-2xl text-sm text-purple-100/55`,
-                  children: `Last 20 songs I've listened to, give them a try.`,
-                }),
-              ],
-            }),
-            (0, jsxRuntime.jsx)(`button`, {
-              type: `button`,
-              className: `inline-flex h-8 w-8 items-center justify-center rounded-md border border-purple-300/15 text-purple-200/70 transition-colors hover:border-purple-200/30 hover:text-purple-100`,
-              'aria-label': `Open music stats`,
-              title: `Open music stats`,
-              onClick: () => s(!0),
-              children: (0, jsxRuntime.jsx)(H, {
-                className: `h-4 w-4`,
-              }),
-            }),
-          ],
-        }),
-        (0, jsxRuntime.jsx)(`div`, {
-          className: `hidden w-full min-h-0 flex-1 flex-col gap-2 overflow-hidden lg:flex`,
-          children: [y, b]
-            .filter((e) => e.length > 0)
-            .map((e, i) =>
-              (0, jsxRuntime.jsx)(
-                `div`,
-                {
-                  className: `flex min-h-0 flex-1 gap-1.5 overflow-hidden`,
-                  children: e.map((e, a) => {
-                    let o = i * 10 + a,
-                      s = t === e.id,
-                      c = !!e.albumArtUrl && !r.has(e.id);
-                    return (0, jsxRuntime.jsxs)(
-                      `article`,
-                      {
-                        onMouseEnter: () => n(e.id),
-                        onFocus: () => n(e.id),
-                        onClick: () => n(e.id),
-                        onKeyDown: (t) => {
-                          (t.key === `Enter` || t.key === ` `) && (t.preventDefault(), n(e.id));
-                        },
-                        role: `button`,
-                        tabIndex: 0,
-                        style: {
-                          flexGrow: s ? 2.8 : 1,
-                          flexBasis: 0,
-                        },
-                        className: `group relative min-h-0 overflow-hidden rounded-xl border text-left transition-[flex-grow] duration-200 ease-out ${s ? `border-purple-200/20` : `border-purple-200/10`}`,
-                        children: [
-                          c
-                            ? (0, jsxRuntime.jsx)(`img`, {
-                                src: e.albumArtUrl,
-                                alt: `${e.trackName} album art`,
-                                className: `h-full w-full object-cover`,
-                                loading: o < 10 ? `eager` : `lazy`,
-                                decoding: `async`,
-                                onError: () => x(e.id),
-                              })
-                            : (0, jsxRuntime.jsx)(`div`, {
-                                className: `h-full w-full`,
-                                style: Ut,
-                              }),
-                          (0, jsxRuntime.jsx)(`div`, {
-                            className: `absolute inset-0`,
-                            style: Wt,
-                          }),
-                          (0, jsxRuntime.jsx)(`div`, {
-                            className: `absolute inset-0`,
-                            style: Gt,
-                          }),
-                          s
-                            ? (0, jsxRuntime.jsx)(`div`, {
-                                className: `absolute inset-0 flex flex-col justify-between p-2.5`,
-                                children: (0, jsxRuntime.jsx)(`div`, {
-                                  className: `space-y-2`,
-                                  children: C(e, !0),
-                                }),
-                              })
-                            : (0, jsxRuntime.jsxs)(`div`, {
-                                className: `absolute inset-0`,
-                                children: [
-                                  (0, jsxRuntime.jsx)(`div`, {
-                                    className: `absolute left-1/2 top-2 -translate-x-1/2 text-[9px] font-medium text-white/70`,
-                                    children: o + 1,
-                                  }),
-                                  (0, jsxRuntime.jsx)(`div`, {
-                                    className: `absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.22em] text-white/65`,
-                                    style: {
-                                      writingMode: `vertical-rl`,
-                                      transform: `translateX(-50%) rotate(180deg)`,
-                                    },
-                                    children: e.artistName,
-                                  }),
-                                ],
-                              }),
-                        ],
-                      },
-                      e.id,
-                    );
-                  }),
-                },
-                `listening-row-${i}`,
-              ),
-            ),
-        }),
-        (0, jsxRuntime.jsx)(`div`, {
-          className: `flex w-full min-w-0 gap-3 overflow-x-auto pb-1 lg:hidden`,
-          children: v.map((e) => {
-            let i = t === e.id,
-              o = !!e.albumArtUrl && !r.has(e.id);
-            return (0, jsxRuntime.jsxs)(
-              motion.article,
-              {
-                whileTap: {
-                  scale: 0.985,
-                },
-                onClick: () => n(e.id),
-                onKeyDown: (t) => {
-                  (t.key === `Enter` || t.key === ` `) && (t.preventDefault(), n(e.id));
-                },
-                role: `button`,
-                tabIndex: 0,
-                className: `relative min-h-[210px] w-[calc(100vw-2.5rem)] max-w-[calc(100vw-2.5rem)] shrink-0 overflow-hidden rounded-[24px] border text-left sm:w-[280px] sm:max-w-[280px] ${i ? `border-purple-200/20` : `border-purple-200/10`}`,
-                children: [
-                  o
-                    ? (0, jsxRuntime.jsx)(`img`, {
-                        src: e.albumArtUrl,
-                        alt: `${e.trackName} album art`,
-                        className: `absolute inset-0 h-full w-full object-cover`,
-                        loading: `lazy`,
-                        decoding: `async`,
-                        onError: () => x(e.id),
-                      })
-                    : (0, jsxRuntime.jsx)(`div`, {
-                        className: `absolute inset-0`,
-                        style: Ut,
-                      }),
-                  (0, jsxRuntime.jsx)(`div`, {
-                    className: `absolute inset-0`,
-                    style: Wt,
-                  }),
-                  (0, jsxRuntime.jsx)(`div`, {
-                    className: `absolute inset-0`,
-                    style: Gt,
-                  }),
-                  (0, jsxRuntime.jsx)(motion.article, {
-                    className: `absolute inset-0 flex flex-col justify-between p-4`,
-                    initial: {
-                      opacity: 0,
-                      y: 10,
-                    },
-                    animate: {
-                      opacity: 1,
-                      y: 0,
-                    },
-                    children: (0, jsxRuntime.jsx)(`div`, {
-                      className: `space-y-3`,
-                      children: C(e, !0),
-                    }),
-                  }),
-                ],
-              },
-              `${e.id}-mobile`,
-            );
-          }),
-        }),
-        (0, jsxRuntime.jsx)(AnimatePresence, {
-          children: o
-            ? (0, jsxRuntime.jsx)(MusicStats, {
-                isModal: !0,
-                onClose: () => s(!1),
-              })
-            : null,
-        }),
-      ],
+                children: category === 'album' && (albumLoading || albumError) ? jsxRuntime.jsx('p', {
+                  className: 'music-empty-line',
+                  role: 'status',
+                  children: albumLoading ? 'Loading albums…' : albumError
+                }) : jsxRuntime.jsx(MusicCarousel, {
+                  title: `Top ${category === 'artist' ? 'Artists' : category === 'album' ? 'Albums' : 'Tracks'}`,
+                  description: `My top ${category}s from ${stats.range.label.toLowerCase()}`,
+                  items: getRankedItems(stats, category),
+                  playback: playback,
+                  type: category,
+                  onOpenGrid: () => setGridType(category)
+                })
+              }, category)
+            })]
+          }), jsxRuntime.jsx(MusicGridDialog, {
+            category: gridType,
+            items: gridType ? getRankedItems(stats, gridType) : [],
+            onClose: () => setGridType(null),
+            playback: playback
+          })]
+        }, stats.range.id) : error ? null : jsxRuntime.jsxs(motion.section, {
+          className: `profile-loading music-loading`,
+          initial: {
+            opacity: 0
+          },
+          animate: {
+            opacity: 1
+          },
+          exit: {
+            opacity: 0
+          },
+          children: [jsxRuntime.jsx(`span`, {}), jsxRuntime.jsx(`span`, {}), jsxRuntime.jsx(`span`, {})]
+        }, `loading`)
+      })]
     });
-  };
+  return isModal ? ve.createPortal(jsxRuntime.jsxs(motion.div, {
+    className: `music-stats-modal`,
+    role: `dialog`,
+    'aria-modal': `true`,
+    'aria-label': `Music stats`,
+    initial: {
+      opacity: 0
+    },
+    animate: {
+      opacity: 1
+    },
+    exit: {
+      opacity: 0
+    },
+    transition: {
+      duration: 0.18,
+      ease: `easeOut`
+    },
+    children: [jsxRuntime.jsx(`button`, {
+      type: `button`,
+      className: `music-stats-modal__backdrop`,
+      'aria-label': `Close music stats`,
+      onClick: onClose
+    }), jsxRuntime.jsx(motion.div, {
+      className: `music-stats-modal__panel`,
+      initial: {
+        opacity: 0,
+        scale: 0.96,
+        y: 16
+      },
+      animate: {
+        opacity: 1,
+        scale: 1,
+        y: 0
+      },
+      exit: {
+        opacity: 0,
+        scale: 0.96,
+        y: 16
+      },
+      transition: {
+        duration: 0.22,
+        ease: `easeOut`
+      },
+      children: content
+    })]
+  }), document.body) : content;
+},
+  RecentSongs = createRecentSongs(MusicStats);
 function qt(e) {
   if (!e) return null;
   let t = new Date(e);
@@ -8325,246 +7613,139 @@ function ga(e, t) {
   }
   return (n.startsWith(r) && (a += 2), a);
 }
-function _a(e) {
-  return e.artists.join(`, `);
-}
-function va(e) {
-  return [e.id, e.name, e.artists.join(`,`)].join(`::`);
-}
 var SongSearch = () => {
-    let {
-        playTrack: e,
-        playVideo: t,
-        stopPlayback: n,
-        playbackSource: r,
-        isAudioPlaying: i,
-        isPlayerPrimingReady: a,
-        manualPlaybackDetails: o,
-        setManualPlaybackDetails: s,
-      } = useAudio(),
-      [c, l] = (0, React.useState)(``),
-      [u, d] = (0, React.useState)([]),
-      [f, m] = (0, React.useState)([]),
-      [h, g] = (0, React.useState)(null);
-    ((0, React.useEffect)(() => {
-      let e = !1;
-      return (
-        ut(!1)
-          .then((t) => {
-            e || d(t);
-          })
-          .catch(() => {
-            e || d([]);
-          }),
-        loadMusicStats(`weeks`)
-          .then((t) => {
-            e || m(t.topTracks || []);
-          })
-          .catch(() => {
-            e || m([]);
-          }),
-        () => {
-          e = !0;
-        }
-      );
-    }, []),
-      (0, React.useEffect)(() => {
-        r !== `manual` && g(null);
-      }, [r]));
-    let _ = (0, React.useMemo)(() => {
-        let e = [],
-          t = new Set();
-        for (let n of f) {
-          let r = _a(n),
-            i = `statsfm:${va(n)}`;
-          t.has(i) ||
-            (t.add(i),
-            e.push({
-              id: i,
-              name: n.name,
-              artist: r,
-              image: n.image ?? null,
-              track: n,
-            }));
-        }
-        for (let n of u) {
-          let r = `recent:${n.id}`;
-          t.has(r) ||
-            (t.add(r),
-            e.push({
-              id: r,
-              name: n.trackName,
-              artist: n.artistName,
-              image: n.albumArtUrl || null,
-              recent: n,
-            }));
-        }
-        return e;
-      }, [f, u]),
-      v = (0, React.useMemo)(() => {
-        let e = c.trim();
-        return e
-          ? _.map((t) => ({
-              song: t,
-              score: ga(`${t.name} ${t.artist}`, e),
-            }))
-              .filter((e) => e.score > 0)
-              .sort((e, t) => t.score - e.score || e.song.name.localeCompare(t.song.name))
-              .slice(0, 8)
-              .map((e) => e.song)
-          : [];
-      }, [c, _]),
-      y = (c) => {
-        if (c.track) {
-          let t = c.track,
-            l = va(t);
-          if (h === l && r === `manual` && i) {
-            (n({
-              resumeSpotify: !0,
-            }),
-              g(null));
-            return;
-          }
-          let u = _a(t),
-            d = o,
-            f = {
-              id: `statsfm:${l}`,
-              trackName: t.name,
-              artistName: u,
-              albumName: t.album,
-              spotifyUrl: t.spotifyUrl,
-              albumArtUrl: t.image ?? void 0,
-            };
-          (g(l),
-            s(f),
-            e(t.name, u, 0, `manual`).then((e) => {
-              e || !a || (g((e) => (e === l ? null : e)), s((e) => (e?.id === f.id ? d : e)));
-            }));
-          return;
-        }
-        let l = c.recent;
-        if (!l) return;
-        let u = `recent:${l.id}`;
-        if (h === u && r === `manual` && i) {
-          (n({
-            resumeSpotify: !0,
-          }),
-            g(null));
-          return;
-        }
-        let d = o,
-          f = {
-            id: u,
-            trackName: l.trackName,
-            artistName: l.artistName,
-            albumName: l.albumName,
-            spotifyUrl: l.spotifyUrl,
-            albumArtUrl: l.albumArtUrl,
-          };
-        (g(u),
-          s(f),
-          (l.youtubeUrl
-            ? t(l.youtubeUrl, 0, `manual`)
-            : e(l.trackName, l.artistName, 0, `manual`)
-          ).then((e) => {
-            e || !a || (g((e) => (e === u ? null : e)), s((e) => (e?.id === f.id ? d : e)));
-          }));
-      };
-    return (0, jsxRuntime.jsxs)(`div`, {
-      className: `dock-song-search`,
-      children: [
-        (0, jsxRuntime.jsxs)(`label`, {
-          className: `dock-song-search__field`,
-          children: [
-            (0, jsxRuntime.jsx)(re, {
-              className: `h-3.5 w-3.5 shrink-0`,
-            }),
-            (0, jsxRuntime.jsx)(`input`, {
-              type: `search`,
-              value: c,
-              onChange: (e) => l(e.target.value),
-              placeholder: `Search listened songs`,
-              'aria-label': `Search listened songs`,
-            }),
-          ],
-        }),
-        c.trim()
-          ? v.length > 0
-            ? (0, jsxRuntime.jsx)(motion.div, {
-                layout: true,
-                initial: {
-                  opacity: 0,
-                  y: -8,
-                  filter: 'blur(5px)',
-                },
-                animate: {
-                  opacity: 1,
-                  y: 0,
-                  filter: 'blur(0px)',
-                },
-                transition: {
-                  duration: 0.28,
-                  ease: [0.22, 1, 0.36, 1],
-                },
-                className: `dock-song-search__results`,
-                'aria-label': `Song search results`,
-                children: v.map((e) => {
-                  let t = e.track ? va(e.track) : `recent:${e.recent?.id}`,
-                    n = h === t && r === `manual` && i;
-                  return (0, jsxRuntime.jsxs)(
-                    `button`,
-                    {
-                      type: `button`,
-                      className: `dock-song-search__item`,
-                      onClick: () => y(e),
-                      children: [
-                        (0, jsxRuntime.jsx)(`span`, {
-                          className: `dock-song-search__art`,
-                          children: e.image
-                            ? (0, jsxRuntime.jsx)(`img`, {
-                                src: e.image,
-                                alt: ``,
-                                loading: `lazy`,
-                                decoding: `async`,
-                              })
-                            : (0, jsxRuntime.jsx)(U, {
-                                className: `h-3.5 w-3.5`,
-                              }),
-                        }),
-                        (0, jsxRuntime.jsxs)(`span`, {
-                          className: `dock-song-search__meta`,
-                          children: [
-                            (0, jsxRuntime.jsx)(`strong`, {
-                              children: e.name,
-                            }),
-                            (0, jsxRuntime.jsx)(`span`, {
-                              children: e.artist,
-                            }),
-                          ],
-                        }),
-                        (0, jsxRuntime.jsx)(`span`, {
-                          children: n
-                            ? (0, jsxRuntime.jsx)(W, {
-                                className: `h-3.5 w-3.5`,
-                              })
-                            : (0, jsxRuntime.jsx)(G, {
-                                className: `h-3.5 w-3.5`,
-                              }),
-                        }),
-                      ],
-                    },
-                    e.id,
-                  );
-                }),
-              })
-            : (0, jsxRuntime.jsx)(`p`, {
-                className: `dock-song-search__empty`,
-                children: `No songs matched that search.`,
-              })
-          : null,
-      ],
+  let audio = useAudio(),
+    [query, setQuery] = React.useState(``),
+    [recentSongs, setRecentSongs] = React.useState([]),
+    [topTracks, setTopTracks] = React.useState([]);
+  React.useEffect(() => {
+    let e = false;
+    ut(false).then(t => {
+      e || setRecentSongs(t);
+    }).catch(() => {
+      e || setRecentSongs([]);
     });
-  },
+    loadMusicStats(`weeks`).then(t => {
+      e || setTopTracks(t.topTracks || []);
+    }).catch(() => {
+      e || setTopTracks([]);
+    });
+    return () => {
+      e = true;
+    };
+  }, []);
+  let songOptions = React.useMemo(() => {
+      let e = [],
+        t = new Set();
+      for (let n of topTracks) {
+        let r = n.artists.join(', '),
+          i = `statsfm:${statsTrackKey(n)}`;
+        t.has(i) || (t.add(i), e.push({
+          id: i,
+          name: n.name,
+          artist: r,
+          image: n.image ?? null,
+          track: n
+        }));
+      }
+      for (let n of recentSongs) {
+        let r = `recent:${n.id}`;
+        t.has(r) || (t.add(r), e.push({
+          id: r,
+          name: n.trackName,
+          artist: n.artistName,
+          image: n.albumArtUrl || null,
+          recent: n
+        }));
+      }
+      return e;
+    }, [topTracks, recentSongs]),
+    results = React.useMemo(() => {
+      let e = query.trim();
+      return e ? songOptions.map(t => ({
+        song: t,
+        score: ga(`${t.name} ${t.artist}`, e)
+      })).filter(e => e.score > 0).sort((e, t) => t.score - e.score || e.song.name.localeCompare(t.song.name)).slice(0, 8).map(e => e.song) : [];
+    }, [query, songOptions]),
+    toggleResult = entry => {
+      const song = entry.track || entry.recent;
+      if (song) void audio.toggleSong(playbackSong(song));
+    };
+  return jsxRuntime.jsxs(`div`, {
+    className: `dock-song-search`,
+    children: [jsxRuntime.jsxs(`label`, {
+      className: `dock-song-search__field`,
+      children: [jsxRuntime.jsx(re, {
+        className: `h-3.5 w-3.5 shrink-0`
+      }), jsxRuntime.jsx(`input`, {
+        type: `search`,
+        value: query,
+        onChange: e => setQuery(e.target.value),
+        placeholder: `Search listened songs`,
+        'aria-label': `Search listened songs`
+      })]
+    }), query.trim() ? results.length > 0 ? jsxRuntime.jsx(motion.div, {
+      layout: true,
+      initial: {
+        opacity: 0,
+        y: -8,
+        filter: 'blur(5px)'
+      },
+      animate: {
+        opacity: 1,
+        y: 0,
+        filter: 'blur(0px)'
+      },
+      transition: {
+        duration: 0.28,
+        ease: [0.22, 1, 0.36, 1]
+      },
+      className: `dock-song-search__results`,
+      'aria-label': `Song search results`,
+      children: results.map(e => {
+        let n = isSelectedSong(audio, e.track || e.recent);
+        return jsxRuntime.jsxs(`button`, {
+          type: `button`,
+          className: `dock-song-search__item`,
+          onClick: () => toggleResult(e),
+          onFocus: () => {
+            void audio.prepareSong(playbackSong(e.track || e.recent));
+          },
+          onPointerEnter: () => {
+            void audio.prepareSong(playbackSong(e.track || e.recent));
+          },
+          children: [jsxRuntime.jsx(`span`, {
+            className: `dock-song-search__art`,
+            children: e.image ? jsxRuntime.jsx(`img`, {
+              src: e.image,
+              alt: ``,
+              loading: `lazy`,
+              decoding: `async`
+            }) : jsxRuntime.jsx(U, {
+              className: `h-3.5 w-3.5`
+            })
+          }), jsxRuntime.jsxs(`span`, {
+            className: `dock-song-search__meta`,
+            children: [jsxRuntime.jsx(`strong`, {
+              children: e.name
+            }), jsxRuntime.jsx(`span`, {
+              children: e.artist
+            })]
+          }), jsxRuntime.jsx(`span`, {
+            children: n ? jsxRuntime.jsx(W, {
+              className: `h-3.5 w-3.5`
+            }) : jsxRuntime.jsx(G, {
+              className: `h-3.5 w-3.5`
+            })
+          })]
+        }, e.id);
+      })
+    }) : jsxRuntime.jsx(`p`, {
+      className: `dock-song-search__empty`,
+      children: `No songs matched that search.`
+    }) : null]
+  });
+},
   latestPresence = null;
 async function subscribePresence(listener) {
   let active = true;
@@ -9418,7 +8599,7 @@ var ko = 0,
       [m, h] = (0, React.useState)(``),
       { visualState: g } = Oo({
         trackId: e,
-        videoId: l(o || s || m || ``) || void 0,
+        videoId: parseVideoId(o || s || m || ``) || void 0,
         track: t,
         artist: n,
         timestamps: c,
@@ -9516,7 +8697,7 @@ var ko = 0,
         startTime: e,
         videoUrlOrId: o || s,
       });
-      let r = l(o || s || ``);
+      let r = parseVideoId(o || s || ``);
       return r && (await V.current.playVideo(r, e, `spotify`))
         ? !0
         : V.current.playTrack(t, n, e, `spotify`);
@@ -9538,7 +8719,7 @@ var ko = 0,
           h(``);
           return;
         }
-        let e = l(o || s || ``);
+        let e = parseVideoId(o || s || ``);
         if (e) {
           h(e);
           return;
@@ -9546,12 +8727,9 @@ var ko = 0,
         let r = !1;
         return (
           h(``),
-          x(`${t} ${n} audio`, {
-            track: t,
-            artist: n,
-          })
-            .then((e) => {
-              r || h(e || ``);
+          resolveTrack(t, n)
+            .then(({videoId}) => {
+              r || h(videoId || ``);
             })
             .catch(() => {
               r || h(``);
@@ -9631,7 +8809,7 @@ var ko = 0,
                   u();
                 }, t);
               },
-              f = l(o || s || ``);
+              f = parseVideoId(o || s || ``);
             if (!f) {
               d(ko);
               return;
@@ -9957,7 +9135,7 @@ function Fo({
   let c = i(),
     { current: u, visualState: d } = Oo({
       trackId: o,
-      videoId: l(s || ``) || void 0,
+      videoId: parseVideoId(s || ``) || void 0,
       track: a,
       artist: t,
       timestamps: r,
@@ -9994,852 +9172,7 @@ function Fo({
     ],
   });
 }
-var Io = {
-    high: {
-      simulation: {
-        TEXTURE_DOWNSAMPLE: 2,
-        DENSITY_DISSIPATION: 0.988,
-        VELOCITY_DISSIPATION: 0.994,
-        PRESSURE_DISSIPATION: 0.88,
-        PRESSURE_ITERATIONS: 12,
-        CURL: 12,
-        SPLAT_RADIUS: 0.0048,
-      },
-      maxFps: 42,
-      opacity: 0.32,
-      pointerSampleIntervalMs: 18,
-      pointerVelocityScale: 4.6,
-      pointerVelocityClamp: 120,
-      seedForce: 76,
-    },
-    medium: {
-      simulation: {
-        TEXTURE_DOWNSAMPLE: 3,
-        DENSITY_DISSIPATION: 0.989,
-        VELOCITY_DISSIPATION: 0.995,
-        PRESSURE_DISSIPATION: 0.9,
-        PRESSURE_ITERATIONS: 8,
-        CURL: 9,
-        SPLAT_RADIUS: 0.0054,
-      },
-      maxFps: 30,
-      opacity: 0.26,
-      pointerSampleIntervalMs: 30,
-      pointerVelocityScale: 3.8,
-      pointerVelocityClamp: 96,
-      seedForce: 62,
-    },
-    low: {
-      simulation: {
-        TEXTURE_DOWNSAMPLE: 4,
-        DENSITY_DISSIPATION: 0.991,
-        VELOCITY_DISSIPATION: 0.996,
-        PRESSURE_DISSIPATION: 0.92,
-        PRESSURE_ITERATIONS: 5,
-        CURL: 6,
-        SPLAT_RADIUS: 0.006,
-      },
-      maxFps: 24,
-      opacity: 0.18,
-      pointerSampleIntervalMs: 52,
-      pointerVelocityScale: 3,
-      pointerVelocityClamp: 72,
-      seedForce: 44,
-    },
-  },
-  Lo = {
-    simulation: {
-      TEXTURE_DOWNSAMPLE: 1,
-      DENSITY_DISSIPATION: 0.972,
-      VELOCITY_DISSIPATION: 0.986,
-      PRESSURE_DISSIPATION: 0.78,
-      PRESSURE_ITERATIONS: 24,
-      CURL: 32,
-      SPLAT_RADIUS: 0.0092,
-    },
-    maxFps: 60,
-    opacity: 0.78,
-    pointerSampleIntervalMs: 4,
-    pointerVelocityScale: 9.4,
-    pointerVelocityClamp: 260,
-    seedForce: 220,
-  },
-  Ro = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  attribute vec2 aPosition;
-  varying vec2 vUv;
-  varying vec2 vL;
-  varying vec2 vR;
-  varying vec2 vT;
-  varying vec2 vB;
-  uniform vec2 texelSize;
-
-  void main () {
-    vUv = aPosition * 0.5 + 0.5;
-    vL = vUv - vec2(texelSize.x, 0.0);
-    vR = vUv + vec2(texelSize.x, 0.0);
-    vT = vUv + vec2(0.0, texelSize.y);
-    vB = vUv - vec2(0.0, texelSize.y);
-    gl_Position = vec4(aPosition, 0.0, 1.0);
-  }
-`,
-  zo = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  uniform sampler2D uTexture;
-  uniform float value;
-
-  void main () {
-    gl_FragColor = value * texture2D(uTexture, vUv);
-  }
-`,
-  Bo = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  uniform sampler2D uTexture;
-
-  void main () {
-    vec3 color = texture2D(uTexture, vUv).rgb;
-    color = 1.0 - exp(-color * 0.72);
-    color = pow(color, vec3(0.96));
-    color *= 0.74;
-    float alpha = clamp(max(color.r, max(color.g, color.b)) * 0.72, 0.0, 0.46);
-    gl_FragColor = vec4(color, alpha);
-  }
-`,
-  Vo = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  uniform sampler2D uTarget;
-  uniform float aspectRatio;
-  uniform vec3 color;
-  uniform vec2 point;
-  uniform float radius;
-
-  void main () {
-    vec2 p = vUv - point.xy;
-    p.x *= aspectRatio;
-    vec3 splat = exp(-dot(p, p) / radius) * color;
-    vec3 base = texture2D(uTarget, vUv).xyz;
-    gl_FragColor = vec4(base + splat, 1.0);
-  }
-`,
-  Ho = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  uniform sampler2D uVelocity;
-  uniform sampler2D uSource;
-  uniform vec2 texelSize;
-  uniform float dt;
-  uniform float dissipation;
-
-  vec4 bilerp (in sampler2D sam, in vec2 p) {
-    vec4 st;
-    st.xy = floor(p - 0.5) + 0.5;
-    st.zw = st.xy + 1.0;
-
-    vec4 uv = st * texelSize.xyxy;
-    vec4 a = texture2D(sam, uv.xy);
-    vec4 b = texture2D(sam, uv.zy);
-    vec4 c = texture2D(sam, uv.xw);
-    vec4 d = texture2D(sam, uv.zw);
-    vec2 f = p - st.xy;
-
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-  }
-
-  void main () {
-    vec2 coord = gl_FragCoord.xy - dt * texture2D(uVelocity, vUv).xy;
-    gl_FragColor = dissipation * bilerp(uSource, coord);
-  }
-`,
-  Uo = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  uniform sampler2D uVelocity;
-  uniform sampler2D uSource;
-  uniform vec2 texelSize;
-  uniform float dt;
-  uniform float dissipation;
-
-  void main () {
-    vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * texelSize;
-    gl_FragColor = dissipation * texture2D(uSource, coord);
-  }
-`,
-  Wo = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  varying vec2 vL;
-  varying vec2 vR;
-  varying vec2 vT;
-  varying vec2 vB;
-  uniform sampler2D uVelocity;
-
-  vec2 sampleVelocity (in vec2 uv) {
-    vec2 multiplier = vec2(1.0);
-
-    if (uv.x < 0.0) { uv.x = 0.0; multiplier.x = -1.0; }
-    if (uv.x > 1.0) { uv.x = 1.0; multiplier.x = -1.0; }
-    if (uv.y < 0.0) { uv.y = 0.0; multiplier.y = -1.0; }
-    if (uv.y > 1.0) { uv.y = 1.0; multiplier.y = -1.0; }
-
-    return multiplier * texture2D(uVelocity, uv).xy;
-  }
-
-  void main () {
-    float L = sampleVelocity(vL).x;
-    float R = sampleVelocity(vR).x;
-    float T = sampleVelocity(vT).y;
-    float B = sampleVelocity(vB).y;
-    float div = 0.5 * (R - L + T - B);
-
-    gl_FragColor = vec4(div, 0.0, 0.0, 1.0);
-  }
-`,
-  Go = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vL;
-  varying vec2 vR;
-  varying vec2 vT;
-  varying vec2 vB;
-  uniform sampler2D uVelocity;
-
-  void main () {
-    float L = texture2D(uVelocity, vL).y;
-    float R = texture2D(uVelocity, vR).y;
-    float T = texture2D(uVelocity, vT).x;
-    float B = texture2D(uVelocity, vB).x;
-    float vorticity = R - L - T + B;
-
-    gl_FragColor = vec4(vorticity, 0.0, 0.0, 1.0);
-  }
-`,
-  Ko = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  varying vec2 vL;
-  varying vec2 vR;
-  varying vec2 vT;
-  varying vec2 vB;
-  uniform sampler2D uVelocity;
-  uniform sampler2D uCurl;
-  uniform float curl;
-  uniform float dt;
-
-  void main () {
-    float L = texture2D(uCurl, vL).x;
-    float R = texture2D(uCurl, vR).x;
-    float T = texture2D(uCurl, vT).x;
-    float B = texture2D(uCurl, vB).x;
-    float C = texture2D(uCurl, vUv).x;
-
-    vec2 force = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L));
-    force /= length(force) + 0.0001;
-    force *= curl * C;
-    force.y *= -1.0;
-
-    vec2 velocity = texture2D(uVelocity, vUv).xy;
-    gl_FragColor = vec4(velocity + force * dt, 0.0, 1.0);
-  }
-`,
-  qo = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  varying vec2 vL;
-  varying vec2 vR;
-  varying vec2 vT;
-  varying vec2 vB;
-  uniform sampler2D uPressure;
-  uniform sampler2D uDivergence;
-
-  vec2 boundary (in vec2 uv) {
-    return min(max(uv, 0.0), 1.0);
-  }
-
-  void main () {
-    float L = texture2D(uPressure, boundary(vL)).x;
-    float R = texture2D(uPressure, boundary(vR)).x;
-    float T = texture2D(uPressure, boundary(vT)).x;
-    float B = texture2D(uPressure, boundary(vB)).x;
-    float C = texture2D(uPressure, vUv).x;
-    float divergence = texture2D(uDivergence, vUv).x;
-    float pressure = (L + R + B + T - divergence) * 0.25;
-
-    gl_FragColor = vec4(pressure, C, 0.0, 1.0);
-  }
-`,
-  Jo = `
-  precision highp float;
-  precision mediump sampler2D;
-
-  varying vec2 vUv;
-  varying vec2 vL;
-  varying vec2 vR;
-  varying vec2 vT;
-  varying vec2 vB;
-  uniform sampler2D uPressure;
-  uniform sampler2D uVelocity;
-
-  vec2 boundary (in vec2 uv) {
-    return min(max(uv, 0.0), 1.0);
-  }
-
-  void main () {
-    float L = texture2D(uPressure, boundary(vL)).x;
-    float R = texture2D(uPressure, boundary(vR)).x;
-    float T = texture2D(uPressure, boundary(vT)).x;
-    float B = texture2D(uPressure, boundary(vB)).x;
-
-    vec2 velocity = texture2D(uVelocity, vUv).xy;
-    velocity.xy -= vec2(R - L, T - B);
-
-    gl_FragColor = vec4(velocity, 0.0, 1.0);
-  }
-`,
-  Yo = class {
-    uniforms = {};
-    program;
-    gl;
-    constructor(e, t, n) {
-      this.gl = e;
-      let r = e.createProgram();
-      if (!r) throw Error(`Unable to create WebGL program.`);
-      if (
-        (e.attachShader(r, t),
-        e.attachShader(r, n),
-        e.bindAttribLocation(r, 0, `aPosition`),
-        e.linkProgram(r),
-        !e.getProgramParameter(r, e.LINK_STATUS))
-      )
-        throw Error(e.getProgramInfoLog(r) ?? `WebGL program link failed.`);
-      let i = e.getProgramParameter(r, e.ACTIVE_UNIFORMS);
-      for (let t = 0; t < i; t += 1) {
-        let n = e.getActiveUniform(r, t);
-        n && (this.uniforms[n.name] = e.getUniformLocation(r, n.name));
-      }
-      this.program = r;
-    }
-    bind() {
-      this.gl.useProgram(this.program);
-    }
-    destroy() {
-      this.gl.deleteProgram(this.program);
-    }
-  },
-  Xo = (e) => {
-    let t = e.trim().match(/[\d.]+/g);
-    if (!t || t.length < 3) return null;
-    let n = t.slice(0, 3).map((e) => Number(e));
-    return n.some((e) => Number.isNaN(e)) ? null : [n[0], n[1], n[2]];
-  },
-  Zo = ([e, t, n], r) => [(e / 255) * r, (t / 255) * r, (n / 255) * r],
-  Qo = (e, t, n) => Math.min(n, Math.max(t, e)),
-  $o = ([e, t, n], [r, i, a], o) => [e + (r - e) * o, t + (i - t) * o, n + (a - n) * o],
-  es = () => {
-    let e = getComputedStyle(document.documentElement),
-      t = Xo(e.getPropertyValue(`--spotify-aura-rgb`)),
-      n = Qo(Number(e.getPropertyValue(`--spotify-aura-strength`).trim() || 0), 0, 1),
-      r = [
-        [`--accent-rgb`, 0.8],
-        [`--p-300`, 0.68],
-        [`--p-400`, 0.6],
-        [`--theme-rgb`, 0.56],
-      ],
-      i = [
-        [0.78, 0.78, 0.83],
-        [0.65, 0.65, 0.77],
-        [0.49, 0.49, 0.61],
-        [0.36, 0.36, 0.49],
-      ],
-      a = r.map(([t, n], r) => {
-        let a = Xo(e.getPropertyValue(t));
-        return a ? Zo(a, n) : i[r];
-      });
-    if (t && n > 0) {
-      let e = $o(t, [255, 255, 255], 0.2),
-        r = $o(t, [18, 18, 18], 0.2),
-        i = $o(t, [120, 185, 255], 0.18);
-      return [Zo(e, 0.68), Zo(t, 0.58), Zo(i, 0.52), Zo(r, 0.5)].map((e, t) => $o(a[t], e, n));
-    }
-    return a;
-  },
-  ts = (e, t, n, r) => {
-    let i = e.createTexture(),
-      a = e.createFramebuffer();
-    if (!i || !a) return !1;
-    (e.bindTexture(e.TEXTURE_2D, i),
-      e.texParameteri(e.TEXTURE_2D, e.TEXTURE_MIN_FILTER, e.NEAREST),
-      e.texParameteri(e.TEXTURE_2D, e.TEXTURE_MAG_FILTER, e.NEAREST),
-      e.texParameteri(e.TEXTURE_2D, e.TEXTURE_WRAP_S, e.CLAMP_TO_EDGE),
-      e.texParameteri(e.TEXTURE_2D, e.TEXTURE_WRAP_T, e.CLAMP_TO_EDGE),
-      e.texImage2D(e.TEXTURE_2D, 0, t, 4, 4, 0, n, r, null),
-      e.bindFramebuffer(e.FRAMEBUFFER, a),
-      e.framebufferTexture2D(e.FRAMEBUFFER, e.COLOR_ATTACHMENT0, e.TEXTURE_2D, i, 0));
-    let o = e.checkFramebufferStatus(e.FRAMEBUFFER) === e.FRAMEBUFFER_COMPLETE;
-    return (e.deleteTexture(i), e.deleteFramebuffer(a), o);
-  },
-  ns = (e, t, n, r) =>
-    ts(e, t, n, r)
-      ? {
-          internalFormat: t,
-          format: n,
-        }
-      : `R16F` in e && t === e.R16F
-        ? ns(e, e.RG16F, e.RG, r)
-        : `RG16F` in e && t === e.RG16F
-          ? ns(e, e.RGBA16F, e.RGBA, r)
-          : null,
-  rs = (e) => {
-    let t = {
-        alpha: !0,
-        antialias: !1,
-        depth: !1,
-        premultipliedAlpha: !1,
-        stencil: !1,
-      },
-      n = e.getContext(`webgl2`, t),
-      r = n ?? (e.getContext(`webgl`, t) || e.getContext(`experimental-webgl`, t));
-    if (!r) return null;
-    let i = n !== null,
-      a,
-      o = !1;
-    if (i)
-      (r.getExtension(`EXT_color_buffer_float`),
-        (o = !!r.getExtension(`OES_texture_float_linear`)),
-        (a = n.HALF_FLOAT));
-    else {
-      let e = r.getExtension(`OES_texture_half_float`);
-      ((o = !!r.getExtension(`OES_texture_half_float_linear`)), (a = e?.HALF_FLOAT_OES));
-    }
-    if (a == null) return null;
-    let s = i ? ns(r, n.RGBA16F, r.RGBA, a) : ns(r, r.RGBA, r.RGBA, a),
-      c = i ? ns(r, n.RG16F, n.RG, a) : ns(r, r.RGBA, r.RGBA, a),
-      l = i ? ns(r, n.R16F, n.RED, a) : ns(r, r.RGBA, r.RGBA, a);
-    return !s || !c || !l
-      ? null
-      : (r.clearColor(0, 0, 0, 0),
-        {
-          gl: r,
-          ext: {
-            formatRGBA: s,
-            formatRG: c,
-            formatR: l,
-            halfFloatTexType: a,
-            supportLinearFiltering: o,
-          },
-        });
-  },
-  is = (e, t, n) => {
-    let r = e.createShader(t);
-    if (!r) throw Error(`Unable to create WebGL shader.`);
-    if ((e.shaderSource(r, n), e.compileShader(r), !e.getShaderParameter(r, e.COMPILE_STATUS)))
-      throw Error(e.getShaderInfoLog(r) ?? `WebGL shader compile failed.`);
-    return r;
-  },
-  as = (e, t) => {
-    let n = rs(e);
-    if (!n) return null;
-    let { gl: r, ext: i } = n,
-      { simulation: a } = t;
-    (r.disable(r.BLEND), r.disable(r.CULL_FACE), r.disable(r.DEPTH_TEST));
-    let o = is(r, r.VERTEX_SHADER, Ro),
-      s = is(r, r.FRAGMENT_SHADER, zo),
-      c = is(r, r.FRAGMENT_SHADER, Bo),
-      l = is(r, r.FRAGMENT_SHADER, Vo),
-      u = is(r, r.FRAGMENT_SHADER, i.supportLinearFiltering ? Uo : Ho),
-      d = is(r, r.FRAGMENT_SHADER, Wo),
-      f = is(r, r.FRAGMENT_SHADER, Go),
-      p = is(r, r.FRAGMENT_SHADER, Ko),
-      m = is(r, r.FRAGMENT_SHADER, qo),
-      h = is(r, r.FRAGMENT_SHADER, Jo),
-      g = new Yo(r, o, s),
-      _ = new Yo(r, o, c),
-      v = new Yo(r, o, l),
-      y = new Yo(r, o, u),
-      b = new Yo(r, o, d),
-      x = new Yo(r, o, f),
-      S = new Yo(r, o, p),
-      C = new Yo(r, o, m),
-      w = new Yo(r, o, h),
-      T = r.createBuffer(),
-      E = r.createBuffer();
-    if (!T || !E) return null;
-    (r.bindBuffer(r.ARRAY_BUFFER, T),
-      r.bufferData(r.ARRAY_BUFFER, new Float32Array([-1, -1, -1, 1, 1, 1, 1, -1]), r.STATIC_DRAW),
-      r.bindBuffer(r.ELEMENT_ARRAY_BUFFER, E),
-      r.bufferData(r.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 0, 2, 3]), r.STATIC_DRAW),
-      r.vertexAttribPointer(0, 2, r.FLOAT, !1, 0, 0),
-      r.enableVertexAttribArray(0));
-    let D = (e) => {
-        (r.deleteTexture(e.texture), r.deleteFramebuffer(e.framebuffer));
-      },
-      O = (e, t, n, i, a, o, s) => {
-        r.activeTexture(r.TEXTURE0 + e);
-        let c = r.createTexture(),
-          l = r.createFramebuffer();
-        if (!c || !l) throw Error(`Unable to create framebuffer objects.`);
-        return (
-          r.bindTexture(r.TEXTURE_2D, c),
-          r.texParameteri(r.TEXTURE_2D, r.TEXTURE_MIN_FILTER, s),
-          r.texParameteri(r.TEXTURE_2D, r.TEXTURE_MAG_FILTER, s),
-          r.texParameteri(r.TEXTURE_2D, r.TEXTURE_WRAP_S, r.CLAMP_TO_EDGE),
-          r.texParameteri(r.TEXTURE_2D, r.TEXTURE_WRAP_T, r.CLAMP_TO_EDGE),
-          r.texImage2D(r.TEXTURE_2D, 0, i, t, n, 0, a, o, null),
-          r.bindFramebuffer(r.FRAMEBUFFER, l),
-          r.framebufferTexture2D(r.FRAMEBUFFER, r.COLOR_ATTACHMENT0, r.TEXTURE_2D, c, 0),
-          r.viewport(0, 0, t, n),
-          r.clear(r.COLOR_BUFFER_BIT),
-          {
-            texture: c,
-            framebuffer: l,
-            textureUnit: e,
-          }
-        );
-      },
-      k = (e, t, n, r, i, a, o) => {
-        let s = O(e, t, n, r, i, a, o),
-          c = O(e + 1, t, n, r, i, a, o);
-        return {
-          get read() {
-            return s;
-          },
-          get write() {
-            return c;
-          },
-          swap() {
-            [s, c] = [c, s];
-          },
-          destroy() {
-            (D(s), D(c));
-          },
-        };
-      },
-      A = (e) => {
-        (r.bindFramebuffer(r.FRAMEBUFFER, e), r.drawElements(r.TRIANGLES, 6, r.UNSIGNED_SHORT, 0));
-      },
-      j = 0,
-      M = 0,
-      N = !1,
-      P,
-      F,
-      ee,
-      I,
-      L,
-      R = es(),
-      z = 0,
-      B = !1,
-      V = performance.now(),
-      H = 0,
-      U = {
-        x: 0,
-        y: 0,
-        dx: 0,
-        dy: 0,
-        moved: !1,
-        initialized: !1,
-        colorIndex: 0,
-      },
-      W = () => {
-        let n = e.width * 0.5,
-          r = e.height * 0.5,
-          i = Math.min(e.width, e.height) * 0.051,
-          a = t.seedForce;
-        for (let e = 0; e < R.length; e += 1) {
-          let t = (e / R.length) * Math.PI * 2,
-            o = n + Math.cos(t) * i,
-            s = r + Math.sin(t) * i,
-            c = Math.cos(t + Math.PI / 2) * a,
-            l = Math.sin(t + Math.PI / 2) * a;
-          te(o, s, c, l, R[e]);
-        }
-      },
-      G = () => {
-        (N && (P.destroy(), F.destroy(), L.destroy(), D(ee), D(I)),
-          (j = Math.max(1, r.drawingBufferWidth >> a.TEXTURE_DOWNSAMPLE)),
-          (M = Math.max(1, r.drawingBufferHeight >> a.TEXTURE_DOWNSAMPLE)));
-        let e = i.supportLinearFiltering ? r.LINEAR : r.NEAREST;
-        ((P = k(2, j, M, i.formatRGBA.internalFormat, i.formatRGBA.format, i.halfFloatTexType, e)),
-          (F = k(0, j, M, i.formatRG.internalFormat, i.formatRG.format, i.halfFloatTexType, e)),
-          (ee = O(
-            4,
-            j,
-            M,
-            i.formatR.internalFormat,
-            i.formatR.format,
-            i.halfFloatTexType,
-            r.NEAREST,
-          )),
-          (I = O(
-            5,
-            j,
-            M,
-            i.formatR.internalFormat,
-            i.formatR.format,
-            i.halfFloatTexType,
-            r.NEAREST,
-          )),
-          (L = k(
-            6,
-            j,
-            M,
-            i.formatR.internalFormat,
-            i.formatR.format,
-            i.halfFloatTexType,
-            r.NEAREST,
-          )),
-          (N = !0),
-          W());
-      },
-      K = () => {
-        let t = Math.max(1, Math.floor(window.innerWidth)),
-          n = Math.max(1, Math.floor(window.innerHeight));
-        (e.width === t && e.height === n && N) || ((e.width = t), (e.height = n), G());
-      },
-      te = (t, n, i, o, s) => {
-        (v.bind(),
-          r.uniform1i(v.uniforms.uTarget, F.read.textureUnit),
-          r.uniform1f(v.uniforms.aspectRatio, e.width / e.height),
-          r.uniform2f(v.uniforms.point, t / e.width, 1 - n / e.height),
-          r.uniform3f(v.uniforms.color, i, -o, 1),
-          r.uniform1f(v.uniforms.radius, a.SPLAT_RADIUS),
-          A(F.write.framebuffer),
-          F.swap(),
-          r.uniform1i(v.uniforms.uTarget, P.read.textureUnit),
-          r.uniform3f(v.uniforms.color, s[0], s[1], s[2]),
-          A(P.write.framebuffer),
-          P.swap());
-      },
-      ne = (e) => {
-        if (B) return;
-        if (!N) {
-          z = window.requestAnimationFrame(ne);
-          return;
-        }
-        if (e - V < 1e3 / t.maxFps) {
-          z = window.requestAnimationFrame(ne);
-          return;
-        }
-        let n = Math.min((e - V) / 1e3, 0.033);
-        if (
-          ((V = e),
-          r.viewport(0, 0, j, M),
-          y.bind(),
-          r.uniform2f(y.uniforms.texelSize, 1 / j, 1 / M),
-          r.uniform1i(y.uniforms.uVelocity, F.read.textureUnit),
-          r.uniform1i(y.uniforms.uSource, F.read.textureUnit),
-          r.uniform1f(y.uniforms.dt, n),
-          r.uniform1f(y.uniforms.dissipation, a.VELOCITY_DISSIPATION),
-          A(F.write.framebuffer),
-          F.swap(),
-          r.uniform1i(y.uniforms.uVelocity, F.read.textureUnit),
-          r.uniform1i(y.uniforms.uSource, P.read.textureUnit),
-          r.uniform1f(y.uniforms.dissipation, a.DENSITY_DISSIPATION),
-          A(P.write.framebuffer),
-          P.swap(),
-          U.moved)
-        ) {
-          let e = R[U.colorIndex % R.length];
-          ((U.colorIndex += 1), te(U.x, U.y, U.dx, U.dy, e), (U.moved = !1));
-        }
-        (x.bind(),
-          r.uniform2f(x.uniforms.texelSize, 1 / j, 1 / M),
-          r.uniform1i(x.uniforms.uVelocity, F.read.textureUnit),
-          A(I.framebuffer),
-          S.bind(),
-          r.uniform2f(S.uniforms.texelSize, 1 / j, 1 / M),
-          r.uniform1i(S.uniforms.uVelocity, F.read.textureUnit),
-          r.uniform1i(S.uniforms.uCurl, I.textureUnit),
-          r.uniform1f(S.uniforms.curl, a.CURL),
-          r.uniform1f(S.uniforms.dt, n),
-          A(F.write.framebuffer),
-          F.swap(),
-          b.bind(),
-          r.uniform2f(b.uniforms.texelSize, 1 / j, 1 / M),
-          r.uniform1i(b.uniforms.uVelocity, F.read.textureUnit),
-          A(ee.framebuffer),
-          g.bind(),
-          r.activeTexture(r.TEXTURE0 + L.read.textureUnit),
-          r.bindTexture(r.TEXTURE_2D, L.read.texture),
-          r.uniform1i(g.uniforms.uTexture, L.read.textureUnit),
-          r.uniform1f(g.uniforms.value, a.PRESSURE_DISSIPATION),
-          A(L.write.framebuffer),
-          L.swap(),
-          C.bind(),
-          r.uniform2f(C.uniforms.texelSize, 1 / j, 1 / M),
-          r.uniform1i(C.uniforms.uDivergence, ee.textureUnit),
-          r.uniform1i(C.uniforms.uPressure, L.read.textureUnit),
-          r.activeTexture(r.TEXTURE0 + L.read.textureUnit));
-        for (let e = 0; e < a.PRESSURE_ITERATIONS; e += 1)
-          (r.bindTexture(r.TEXTURE_2D, L.read.texture), A(L.write.framebuffer), L.swap());
-        (w.bind(),
-          r.uniform2f(w.uniforms.texelSize, 1 / j, 1 / M),
-          r.uniform1i(w.uniforms.uPressure, L.read.textureUnit),
-          r.uniform1i(w.uniforms.uVelocity, F.read.textureUnit),
-          A(F.write.framebuffer),
-          F.swap(),
-          r.viewport(0, 0, r.drawingBufferWidth, r.drawingBufferHeight),
-          _.bind(),
-          r.uniform2f(_.uniforms.texelSize, 1 / j, 1 / M),
-          r.uniform1i(_.uniforms.uTexture, P.read.textureUnit),
-          A(null),
-          (z = window.requestAnimationFrame(ne)));
-      },
-      re = (e) => {
-        if (e.pointerType && e.pointerType !== `mouse`) return;
-        let n = performance.now();
-        if (t.pointerSampleIntervalMs > 0 && n - H < t.pointerSampleIntervalMs) return;
-        H = n;
-        let r = e.clientX,
-          i = e.clientY;
-        if (!U.initialized) {
-          ((U.x = r), (U.y = i), (U.initialized = !0));
-          return;
-        }
-        ((U.dx = Qo(
-          (r - U.x) * t.pointerVelocityScale,
-          -t.pointerVelocityClamp,
-          t.pointerVelocityClamp,
-        )),
-          (U.dy = Qo(
-            (i - U.y) * t.pointerVelocityScale,
-            -t.pointerVelocityClamp,
-            t.pointerVelocityClamp,
-          )),
-          (U.x = r),
-          (U.y = i),
-          (U.moved = Math.abs(U.dx) > 0.01 || Math.abs(U.dy) > 0.01));
-      },
-      ie = 0,
-      q = 0,
-      ae = () => {
-        ie === 0 &&
-          (ie = window.requestAnimationFrame(() => {
-            ((ie = 0), K());
-          }));
-      },
-      J = new MutationObserver(() => {
-        q === 0 &&
-          (q = window.setTimeout(() => {
-            ((q = 0), (R = es()));
-          }, 80));
-      }),
-      oe = () => {
-        z !== 0 ||
-          B ||
-          document.hidden ||
-          ((V = performance.now()), (z = window.requestAnimationFrame(ne)));
-      },
-      se = () => {
-        z !== 0 && (window.cancelAnimationFrame(z), (z = 0));
-      },
-      ce = () => {
-        if (document.hidden) {
-          se();
-          return;
-        }
-        (K(), oe());
-      };
-    return (
-      K(),
-      window.addEventListener(`resize`, ae),
-      window.addEventListener(`pointermove`, re, {
-        passive: !0,
-      }),
-      document.addEventListener(`visibilitychange`, ce),
-      J.observe(document.documentElement, {
-        attributes: !0,
-        attributeFilter: [`style`, `class`],
-      }),
-      oe(),
-      {
-        destroy() {
-          ((B = !0),
-            se(),
-            ie !== 0 && window.cancelAnimationFrame(ie),
-            q !== 0 && window.clearTimeout(q),
-            window.removeEventListener(`resize`, ae),
-            window.removeEventListener(`pointermove`, re),
-            document.removeEventListener(`visibilitychange`, ce),
-            J.disconnect(),
-            N && (P.destroy(), F.destroy(), L.destroy(), D(ee), D(I)),
-            g.destroy(),
-            _.destroy(),
-            v.destroy(),
-            y.destroy(),
-            b.destroy(),
-            x.destroy(),
-            S.destroy(),
-            C.destroy(),
-            w.destroy(),
-            r.deleteShader(o),
-            r.deleteShader(s),
-            r.deleteShader(c),
-            r.deleteShader(l),
-            r.deleteShader(u),
-            r.deleteShader(d),
-            r.deleteShader(f),
-            r.deleteShader(p),
-            r.deleteShader(m),
-            r.deleteShader(h),
-            r.deleteBuffer(T),
-            r.deleteBuffer(E));
-        },
-      }
-    );
-  },
-  os = () => {
-    let e = (0, React.useRef)(null),
-      t = i(),
-      n = m() === `lockedin`,
-      r = n ? Lo : t.tier === `high` ? Io.high : t.tier === `low` ? Io.low : Io.medium;
-    return (
-      (0, React.useEffect)(() => {
-        let i = e.current;
-        if (!i || (t.shouldDisableMouseTrail && !n)) return;
-        let a = null;
-        try {
-          a = as(i, r);
-        } catch (e) {
-          console.warn(`Liquid ink mouse trail is unavailable on this device.`, e);
-        }
-        return () => {
-          a?.destroy();
-        };
-      }, [t.shouldDisableMouseTrail, n, r]),
-      t.shouldDisableMouseTrail && !n
-        ? null
-        : (0, jsxRuntime.jsx)(`canvas`, {
-            ref: e,
-            className: `fixed inset-0 h-screen w-screen pointer-events-none z-[4]`,
-            style: {
-              opacity: r.opacity,
-              filter: n ? `saturate(1.35) brightness(1.18)` : void 0,
-            },
-          })
-    );
-  },
-  ss = () =>
+var ss = () =>
     (0, jsxRuntime.jsxs)(`svg`, {
       xmlns: `http://www.w3.org/2000/svg`,
       width: `12`,
@@ -11186,7 +9519,6 @@ var MainProfile = () => {
       (0, jsxRuntime.jsx)(NowPlayingDock, {
         spotify: O,
       }),
-      (0, jsxRuntime.jsx)(os, {}),
       (0, jsxRuntime.jsx)(`div`, {
         className: `page-grain`,
         'aria-hidden': `true`,

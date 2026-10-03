@@ -16761,128 +16761,6 @@ function kd({ children: e, isValidProp: t, ...n }) {
     e,
   );
 }
-var Ad = new Map(),
-  jd = new Map(),
-  Md = `site-youtube-video-candidates-v1`,
-  Nd = 6048e5,
-  Pd = 80;
-function Fd(e, t = {}) {
-  let n = e.trim().toLowerCase(),
-    r = t.track?.trim().toLowerCase() || ``,
-    i = t.artist?.trim().toLowerCase() || ``;
-  return !n && !r && !i ? `` : [n, r, i].join(`::`);
-}
-function Id(e) {
-  let t = [...(Array.isArray(e?.videoIds) ? e.videoIds : []), e?.videoId]
-    .map((e) => (typeof e == `string` ? e.trim() : ``))
-    .filter((e) => /^[a-zA-Z0-9_-]{11}$/.test(e));
-  return [...new Set(t)];
-}
-function Ld() {
-  try {
-    return typeof window < `u` && window.localStorage !== void 0;
-  } catch {
-    return !1;
-  }
-}
-function Rd() {
-  if (!Ld()) return {};
-  try {
-    let e = window.localStorage.getItem(Md);
-    if (!e) return {};
-    let t = JSON.parse(e);
-    return t && typeof t == `object` && !Array.isArray(t) ? t : {};
-  } catch {
-    return {};
-  }
-}
-function zd(e) {
-  if (Ld())
-    try {
-      let t = Object.fromEntries(
-        Object.entries(e)
-          .sort((e, t) => t[1].cachedAt - e[1].cachedAt)
-          .slice(0, Pd),
-      );
-      window.localStorage.setItem(Md, JSON.stringify(t));
-    } catch {}
-}
-function Bd(e) {
-  if (Ad.has(e)) return Ad.get(e) ?? [];
-  let t = Rd(),
-    n = t[e];
-  if (!n || typeof n.cachedAt != `number`) return null;
-  if (Date.now() - n.cachedAt > Nd) return (delete t[e], zd(t), null);
-  let r = Id({
-    videoIds: n.videoIds,
-  });
-  return (Ad.set(e, r), r);
-}
-function Vd(e, t) {
-  Ad.set(e, t);
-  let n = Rd();
-  ((n[e] = {
-    videoIds: t,
-    cachedAt: Date.now(),
-  }),
-    zd(n));
-}
-function Hd(e, t = {}) {
-  let n = t.track?.trim() || ``,
-    r = t.artist?.trim() || ``,
-    i = Fd(e, t);
-  if (!i) return Promise.resolve([]);
-  let a = Bd(i);
-  if (a) return Promise.resolve(a);
-  let o = jd.get(i);
-  if (o) return o;
-  let s = (async () => {
-    let t = new URLSearchParams({
-      query: e,
-    });
-    (n && t.set(`track`, n), r && t.set(`artist`, r));
-    let a = await fetch(`/.netlify/functions/getYoutubeVideo?${t.toString()}`);
-    if (!a.ok) throw Error(`YouTube API error: ${a.status}`);
-    let o = Id(await a.json());
-    return (Vd(i, o), o);
-  })();
-  return (
-    jd.set(i, s),
-    s.finally(() => {
-      jd.delete(i);
-    })
-  );
-}
-var Ud = async (e, t = {}) => (Fd(e, t) && (await Hd(e, t))[0]) || null,
-  Gd = async (e, t = {}) => {
-    let n = Fd(e, t);
-    if (!(!n || Ad.has(n) || jd.has(n)))
-      try {
-        await Hd(e, t);
-      } catch {}
-  };
-function Kd(e) {
-  let t = e.trim();
-  if (!t) return null;
-  if (/^[a-zA-Z0-9_-]{11}$/.test(t)) return t;
-  try {
-    let e = new URL(t);
-    if (e.hostname === `youtu.be`) {
-      let t = e.pathname.replace(/^\/+/, ``).split(`/`)[0];
-      return /^[a-zA-Z0-9_-]{11}$/.test(t) ? t : null;
-    }
-    if (e.hostname.includes(`youtube.com`)) {
-      let t = e.searchParams.get(`v`);
-      if (t && /^[a-zA-Z0-9_-]{11}$/.test(t)) return t;
-      let n = e.pathname.split(`/`).filter(Boolean),
-        r = n[n.length - 1];
-      return /^[a-zA-Z0-9_-]{11}$/.test(r) ? r : null;
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
 var qd = s((e) => {
     var t = p(),
       n = Symbol.for(`react.element`),
@@ -17247,7 +17125,6 @@ var Zf = () =>
     isLowPerformanceMode: !1,
     shouldReduceMotion: !1,
     shouldDisableHeavyEffects: !1,
-    shouldDisableMouseTrail: !1,
     shouldUseStaticBackground: !1,
   },
   ip =
@@ -17404,7 +17281,6 @@ var jp = () => {
         isLowPerformanceMode: p,
         shouldReduceMotion: m,
         shouldDisableHeavyEffects: h,
-        shouldDisableMouseTrail: r || h,
         shouldUseStaticBackground: !dp && p,
       }),
       up
@@ -17742,13 +17618,11 @@ export {
   _ as C,
   nt as S,
   u as T,
-  Gd as _,
   Fp as a,
   _d as b,
   qf as c,
   Yf as d,
   Af as f,
-  Kd as g,
   Jd as h,
   Vp as i,
   Gf as l,
@@ -17760,7 +17634,6 @@ export {
   tp as s,
   fw as t,
   Jf as u,
-  Ud as v,
   p as w,
   _n as x,
   Od as y,

@@ -1,17 +1,20 @@
-import { requestJson, readStored, storeValue } from './request.js';
+import { readStored, storeValue } from "./request.js";
+import { resolveTrack, parseVideoId } from "./playback-cache.js";
 
-const clamp = (value, max = 100) => Math.min(max, Math.max(0, Number(value) || 0));
-const initialVolume = readStored('site-global-volume', 30);
+const clamp = (value, max = 100) =>
+  Math.min(max, Math.max(0, Number(value) || 0));
+const initialVolume = readStored("site-global-volume", 30);
 const listeners = new Set();
 const mediaElements = new Map();
 let state = {
   volume: clamp(initialVolume),
   isAudioDisabled: false,
   isAudioPlaying: false,
+  isAudioLoading: false,
   isClipPlaying: false,
   isPlaybackInterrupted: false,
   isPlayerPrimingReady: true,
-  playbackSource: 'none',
+  playbackSource: "none",
   activeVideoId: null,
   playbackTime: 0,
   playbackDuration: 0,
@@ -29,21 +32,8 @@ let engineHost;
 let embedPanel;
 let candidates = [];
 let autoplayWatch;
-
-const trackRequests = new Map();
-
-function resolveTrack(track, artist) {
-  const query = new URLSearchParams({ track, artist }).toString();
-  if (!trackRequests.has(query)) {
-    if (trackRequests.size >= 20) trackRequests.delete(trackRequests.keys().next().value);
-    const request = requestJson(`/api/playback?${query}`).catch((error) => {
-      trackRequests.delete(query);
-      throw error;
-    });
-    trackRequests.set(query, request);
-  }
-  return trackRequests.get(query);
-}
+let preparedVideoId;
+let preparation = 0;
 
 export function updateAudioPresence(presence) {
   const spotify = presence?.listening_to_spotify ? presence.spotify : null;
@@ -52,6 +42,10 @@ export function updateAudioPresence(presence) {
 }
 
 function publish(patch) {
+  if (
+    Object.entries(patch).every(([key, value]) => Object.is(state[key], value))
+  )
+    return;
   state = { ...state, ...patch };
   listeners.forEach((listener) => listener());
 }
@@ -74,7 +68,7 @@ function setVolume(value) {
   const volume = clamp(value);
   if (volume) lastVolume = volume;
   publish({ volume });
-  storeValue('site-global-volume', volume);
+  storeValue("site-global-volume", volume);
   applyPlayerLevel();
   mediaElements.forEach((base, element) => {
     element.volume = (base * volume) / 100;
@@ -88,17 +82,17 @@ function removeEmbed() {
 
 function mountEmbed(title) {
   removeEmbed();
-  const panel = document.createElement('aside');
-  panel.className = 'embedded-player';
-  panel.setAttribute('aria-label', title);
-  const close = document.createElement('button');
-  close.type = 'button';
-  close.className = 'embedded-player__close';
-  close.textContent = '×';
-  close.setAttribute('aria-label', 'Close music player');
-  close.addEventListener('click', () => stopPlayback({ resumeSpotify: false }));
-  const content = document.createElement('div');
-  content.id = 'embedded-player-content';
+  const panel = document.createElement("aside");
+  panel.className = "embedded-player";
+  panel.setAttribute("aria-label", title);
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "embedded-player__close";
+  close.textContent = "×";
+  close.setAttribute("aria-label", "Close music player");
+  close.addEventListener("click", () => stopPlayback({ resumeSpotify: false }));
+  const content = document.createElement("div");
+  content.id = "embedded-player-content";
   panel.append(close, content);
   document.body.append(panel);
   embedPanel = panel;
@@ -108,11 +102,11 @@ function mountEmbed(title) {
 // Off-screen (not display:none, which browsers throttle) 200x200 host for the audio-only YouTube engine.
 function mountEngine() {
   if (engineHost?.isConnected) return engineHost;
-  engineHost = document.createElement('div');
-  engineHost.className = 'audio-engine';
-  engineHost.setAttribute('aria-hidden', 'true');
-  const target = document.createElement('div');
-  target.id = 'audio-engine-player';
+  engineHost = document.createElement("div");
+  engineHost.className = "audio-engine";
+  engineHost.setAttribute("aria-hidden", "true");
+  const target = document.createElement("div");
+  target.id = "audio-engine-player";
   engineHost.append(target);
   document.body.append(engineHost);
   return engineHost;
@@ -123,16 +117,19 @@ function loadYouTube() {
   if (window.YT?.Player) return Promise.resolve(window.YT);
   if (youtubeScript) return youtubeScript;
   youtubeScript = new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('YouTube did not respond')), 10000);
+    const timeout = setTimeout(
+      () => reject(new Error("YouTube did not respond")),
+      10000,
+    );
     window.onYouTubeIframeAPIReady = () => {
       clearTimeout(timeout);
       resolve(window.YT);
     };
-    const script = document.createElement('script');
-    script.src = 'https://www.youtube.com/iframe_api';
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
     script.onerror = () => {
       clearTimeout(timeout);
-      reject(new Error('YouTube unavailable'));
+      reject(new Error("YouTube unavailable"));
     };
     document.head.append(script);
   }).catch((error) => {
@@ -144,7 +141,13 @@ function loadYouTube() {
 
 function resumeOnFailure() {
   clearTimeout(autoplayWatch);
-  publish({ isAudioPlaying: false, playbackSource: 'none', activeVideoId: null });
+  clearInterval(progressTimer);
+  publish({
+    isAudioPlaying: false,
+    isAudioLoading: false,
+    playbackSource: "none",
+    activeVideoId: null,
+  });
 }
 
 async function ensurePlayer() {
@@ -153,12 +156,15 @@ async function ensurePlayer() {
     .then(
       (YT) =>
         new Promise((resolve, reject) => {
-          if (state.isAudioDisabled) return reject(new Error('Audio disabled'));
+          if (state.isAudioDisabled) return reject(new Error("Audio disabled"));
           mountEngine();
-          const timer = setTimeout(() => reject(new Error('Player unavailable')), 10000);
-          player = new YT.Player('audio-engine-player', {
-            width: '200',
-            height: '200',
+          const timer = setTimeout(
+            () => reject(new Error("Player unavailable")),
+            10000,
+          );
+          player = new YT.Player("audio-engine-player", {
+            width: "200",
+            height: "200",
             playerVars: {
               controls: 0,
               disablekb: 1,
@@ -181,16 +187,29 @@ async function ensurePlayer() {
                   clearTimeout(autoplayWatch);
                   youtubeBlocked = false;
                 }
-                publish({ isAudioPlaying: playing });
-                if (event.data === YT.PlayerState.ENDED)
-                  stopPlayback({ resumeSpotify: state.playbackSource === 'manual' });
+                if (state.playbackSource !== "none")
+                  publish({
+                    isAudioPlaying: playing,
+                    ...(playing
+                      ? { isAudioLoading: false }
+                      : event.data === YT.PlayerState.BUFFERING
+                        ? { isAudioLoading: true }
+                        : {}),
+                  });
+                if (
+                  event.data === YT.PlayerState.ENDED &&
+                  state.playbackSource !== "none"
+                )
+                  stopPlayback({
+                    resumeSpotify: state.playbackSource === "manual",
+                  });
               },
               onAutoplayBlocked: () => {
                 youtubeBlocked = true;
               },
               onError: () => {
                 clearTimeout(timer);
-                reject(new Error('Video cannot be embedded'));
+                reject(new Error("Video cannot be embedded"));
                 tryNextCandidate();
               },
             },
@@ -199,6 +218,11 @@ async function ensurePlayer() {
     )
     .catch((error) => {
       playerReady = null;
+      player?.destroy?.();
+      player = null;
+      engineHost?.remove();
+      engineHost = null;
+      preparedVideoId = null;
       throw error;
     });
   return playerReady;
@@ -208,15 +232,22 @@ async function ensurePlayer() {
 function tryNextCandidate() {
   const next = candidates.shift();
   if (next && !state.isAudioDisabled) {
-    const elapsed = next.source === 'spotify' ? (Date.now() - next.at) / 1000 : 0;
-    void playVideo(next.id, next.offset + elapsed, next.source, { keepCandidates: true });
+    const elapsed =
+      next.source === "spotify" ? (Date.now() - next.at) / 1000 : 0;
+    void playVideo(next.id, next.offset + elapsed, next.source, {
+      keepCandidates: true,
+    });
   } else resumeOnFailure();
 }
 
 function watchAutoplay(request) {
   clearTimeout(autoplayWatch);
   autoplayWatch = setTimeout(() => {
-    if (request === generation && !state.isAudioPlaying && state.playbackSource !== 'none')
+    if (
+      request === generation &&
+      !state.isAudioPlaying &&
+      state.playbackSource !== "none"
+    )
       youtubeBlocked = true;
   }, 3000);
 }
@@ -228,36 +259,68 @@ function retryYoutube() {
   player.playVideo?.();
 }
 
-function videoId(value) {
-  if (/^[\w-]{11}$/.test(value || '')) return value;
+async function prepareSong(song, { cue = true } = {}) {
+  if (!entered || state.isAudioDisabled || !song?.trackName) return false;
+  const request = cue ? ++preparation : preparation;
   try {
-    const url = new URL(value);
-    if (url.hostname === 'youtu.be') return url.pathname.slice(1).split('/')[0];
-    if (['youtube.com', 'www.youtube.com', 'www.youtube-nocookie.com'].includes(url.hostname))
-      return url.searchParams.get('v');
+    const id = parseVideoId(song.youtubeUrl);
+    const [result, yt] = await Promise.all([
+      id ? { videoId: id } : resolveTrack(song.trackName, song.artistName),
+      ensurePlayer(),
+    ]);
+    if (!result.videoId) return false;
+    if (
+      cue &&
+      request === preparation &&
+      state.playbackSource === "none" &&
+      !state.isAudioDisabled &&
+      !state.isClipPlaying &&
+      !state.isPlaybackInterrupted
+    ) {
+      preparedVideoId = result.videoId;
+      yt.cueVideoById?.({ videoId: preparedVideoId, startSeconds: 0 });
+    }
+    return true;
   } catch {
-    return null;
+    return false;
   }
-  return null;
 }
 
-async function playVideo(value, startTime = 0, source = 'manual', { keepCandidates = false } = {}) {
-  const id = videoId(value);
-  if (!id || state.isAudioDisabled || state.volume === 0 || !entered) return false;
+async function playVideo(
+  value,
+  startTime = 0,
+  source = "manual",
+  { keepCandidates = false } = {},
+) {
+  const id = parseVideoId(value);
+  if (!id || state.isAudioDisabled || state.volume === 0 || !entered)
+    return false;
   if (!keepCandidates) candidates = [];
   const request = ++generation;
   const requestedAt = Date.now();
   removeEmbed();
+  publish({
+    playbackSource: source,
+    isAudioLoading: true,
+    isAudioPlaying: false,
+  });
   try {
     const yt = await ensurePlayer();
     if (request !== generation) return false;
     const offset = Math.max(
       0,
-      startTime + (source === 'spotify' ? (Date.now() - requestedAt) / 1000 : 0),
+      startTime +
+        (source === "spotify" ? (Date.now() - requestedAt) / 1000 : 0),
     );
-    publish({ playbackSource: source, activeVideoId: id, playbackTime: offset });
+    publish({
+      playbackSource: source,
+      activeVideoId: id,
+      playbackTime: offset,
+    });
     applyPlayerLevel();
-    yt.loadVideoById({ videoId: id, startSeconds: offset });
+    if (preparedVideoId === id && offset === 0) yt.playVideo();
+    else yt.loadVideoById({ videoId: id, startSeconds: offset });
+    preparedVideoId = null;
     watchAutoplay(request);
     clearInterval(progressTimer);
     progressTimer = setInterval(() => {
@@ -275,77 +338,126 @@ async function playVideo(value, startTime = 0, source = 'manual', { keepCandidat
 }
 
 function openSpotifyEmbed(url) {
-  const id = /open\.spotify\.com\/track\/([A-Za-z0-9]+)/.exec(url || '')?.[1];
+  const id = /open\.spotify\.com\/track\/([A-Za-z0-9]+)/.exec(url || "")?.[1];
   if (!id || state.isAudioDisabled) return false;
   player?.stopVideo?.();
-  const panel = mountEmbed('Spotify player');
-  const frame = document.createElement('iframe');
+  const panel = mountEmbed("Spotify player");
+  const frame = document.createElement("iframe");
   frame.src = `https://open.spotify.com/embed/track/${id}?utm_source=generator&theme=0`;
-  frame.title = 'Spotify track player';
-  frame.allow = 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
-  frame.height = '152';
-  frame.width = '100%';
-  frame.setAttribute('allowtransparency', 'true');
-  panel.querySelector('#embedded-player-content').replaceWith(frame);
-  publish({ playbackSource: 'manual', isAudioPlaying: false, activeVideoId: null });
+  frame.title = "Spotify track player";
+  frame.allow =
+    "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
+  frame.height = "152";
+  frame.width = "100%";
+  frame.setAttribute("allowtransparency", "true");
+  panel.querySelector("#embedded-player-content").replaceWith(frame);
+  publish({
+    playbackSource: "manual",
+    isAudioPlaying: false,
+    isAudioLoading: false,
+    activeVideoId: null,
+  });
   return true;
 }
 
-async function playTrack(track, artist, startTime = 0, source = 'spotify') {
+async function playTrack(track, artist, startTime = 0, source = "spotify") {
   if (state.isAudioDisabled || state.volume === 0 || !entered) return false;
   const request = ++generation;
   const requestedAt = Date.now();
+  publish({
+    playbackSource: source,
+    isAudioLoading: true,
+    isAudioPlaying: false,
+  });
+  player?.pauseVideo?.();
   try {
-    const result = await resolveTrack(track, artist);
+    const [result] = await Promise.all([
+      resolveTrack(track, artist),
+      ensurePlayer(),
+    ]);
     if (request !== generation) return false;
-    const ids = [...new Set([result.videoId, ...(result.videoIds || [])].filter(Boolean))];
+    const ids = [
+      ...new Set([result.videoId, ...(result.videoIds || [])].filter(Boolean)),
+    ];
     if (ids.length) {
-      const offset = startTime + (source === 'spotify' ? (Date.now() - requestedAt) / 1000 : 0);
-      candidates = ids.slice(1).map((id) => ({ id, offset, source, at: Date.now() }));
+      const offset =
+        startTime +
+        (source === "spotify" ? (Date.now() - requestedAt) / 1000 : 0);
+      candidates = ids
+        .slice(1)
+        .map((id) => ({ id, offset, source, at: Date.now() }));
       return playVideo(ids[0], offset, source, { keepCandidates: true });
     }
   } catch {
     if (request !== generation) return false;
   }
-  if (source === 'manual') return openSpotifyEmbed(state.manualPlaybackDetails?.spotifyUrl);
+  if (
+    source === "manual" &&
+    openSpotifyEmbed(state.manualPlaybackDetails?.spotifyUrl)
+  )
+    return true;
+  resumeOnFailure();
   return false;
+}
+
+function toggleSong(song) {
+  if (state.isAudioDisabled || !entered) return Promise.resolve(false);
+  if (
+    state.playbackSource === "manual" &&
+    state.manualPlaybackDetails?.id === song.id
+  ) {
+    stopPlayback({ resumeSpotify: true });
+    return Promise.resolve(false);
+  }
+  setManualPlaybackDetails(song);
+  const id = parseVideoId(song.youtubeUrl);
+  return id
+    ? playVideo(id, 0, "manual")
+    : playTrack(song.trackName, song.artistName, 0, "manual");
 }
 
 function stopPlayback({ resumeSpotify = false } = {}) {
   generation++;
+  preparation++;
   candidates = [];
   clearTimeout(autoplayWatch);
   clearInterval(progressTimer);
   removeEmbed();
-  try {
-    player?.stopVideo?.();
-  } catch {
-    /* The engine stays alive so the next track starts instantly. */
-  }
+  preparedVideoId = null;
   publish({
-    playbackSource: 'none',
+    playbackSource: "none",
     activeVideoId: null,
     isAudioPlaying: false,
+    isAudioLoading: false,
     playbackTime: 0,
     playbackDuration: 0,
   });
+  try {
+    player?.stopVideo?.();
+  } catch {
+    /* Keep the engine ready for the next track. */
+  }
   if (resumeSpotify && spotifyResume && !state.isAudioDisabled) {
     const request = spotifyResume;
     const offset = request.startTime + (Date.now() - request.at) / 1000;
-    if (request.videoUrlOrId) void playVideo(request.videoUrlOrId, offset, 'spotify');
-    else void playTrack(request.track, request.artist, offset, 'spotify');
+    if (request.videoUrlOrId)
+      void playVideo(request.videoUrlOrId, offset, "spotify");
+    else void playTrack(request.track, request.artist, offset, "spotify");
   }
 }
 
 function setManualPlaybackDetails(value) {
   publish({
-    manualPlaybackDetails: typeof value === 'function' ? value(state.manualPlaybackDetails) : value,
+    manualPlaybackDetails:
+      typeof value === "function" ? value(state.manualPlaybackDetails) : value,
   });
 }
 
 const actions = {
   playTrack,
   playVideo,
+  prepareSong,
+  toggleSong,
   stopPlayback,
   setVolume,
   setManualPlaybackDetails,
@@ -370,7 +482,8 @@ const actions = {
     publish({
       isAudioDisabled: true,
       isAudioPlaying: false,
-      playbackSource: 'none',
+      isAudioLoading: false,
+      playbackSource: "none",
       activeVideoId: null,
       playbackTime: 0,
       playbackDuration: 0,
@@ -390,7 +503,7 @@ const actions = {
   updateTime(seconds) {
     if (
       player &&
-      state.playbackSource === 'spotify' &&
+      state.playbackSource === "spotify" &&
       Math.abs(player.getCurrentTime() - seconds) > 1.5
     )
       player.seekTo(seconds, true);
@@ -418,7 +531,7 @@ const actions = {
   resumeAfterExternalMedia() {
     publish({ isPlaybackInterrupted: false });
     if (state.isAudioDisabled) return;
-    if (state.playbackSource !== 'none') player?.playVideo?.();
+    if (state.playbackSource !== "none") player?.playVideo?.();
   },
   registerMediaElement(element, { baseVolume = 1 } = {}) {
     mediaElements.set(element, clamp(baseVolume, 1));
@@ -437,14 +550,17 @@ export function createAudioComponents(React, jsx) {
   function AudioProvider({ children }) {
     const current = React.useSyncExternalStore(subscribe, () => state);
     React.useEffect(() => {
-      document.addEventListener('pointerdown', retryYoutube);
-      document.addEventListener('keydown', retryYoutube);
+      document.addEventListener("pointerdown", retryYoutube);
+      document.addEventListener("keydown", retryYoutube);
       return () => {
-        document.removeEventListener('pointerdown', retryYoutube);
-        document.removeEventListener('keydown', retryYoutube);
+        document.removeEventListener("pointerdown", retryYoutube);
+        document.removeEventListener("keydown", retryYoutube);
       };
     }, []);
-    return jsx(Context.Provider, { value: { ...current, ...actions }, children });
+    return jsx(Context.Provider, {
+      value: { ...current, ...actions },
+      children,
+    });
   }
   return { AudioProvider, useAudio: () => React.useContext(Context) };
 }
