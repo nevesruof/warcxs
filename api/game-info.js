@@ -2,6 +2,8 @@
 // The frontend only knows a Discord application id, so this bridges it in two hops:
 // Discord's public RPC endpoint gives the game's name, then IGDB is searched by that name.
 import { cached, fetchJson, endpoint } from '../lib/http.js';
+import { readBot } from '../lib/activity.js';
+import { readGameInfo } from '../lib/game-info.js';
 
 // IGDB v4 website category enum (only the ones the profile card links out to).
 const CATEGORY_HOST = {
@@ -127,23 +129,14 @@ export async function lookupGame(applicationId) {
   });
 }
 
-export default endpoint(
-  async (params) => {
-    const ids = (params.get('ids') || '')
-      .split(',')
-      .map((id) => id.trim())
-      .filter(Boolean)
-      .slice(0, 25);
-    if (!ids.length) return [];
-    return Promise.all(
-      ids.map(async (id) => {
-        try {
-          return (await lookupGame(id)) || { id, source: 'discord' };
-        } catch {
-          return { id, source: 'discord' };
-        }
-      }),
-    );
-  },
-  { maxAge: 3600 },
-);
+export default endpoint(async (params) => {
+  const ids = [...new Set((params.get('ids') || '').split(',').map((id) => id.trim()).filter(Boolean))];
+  if (!ids.length) return [];
+  if (ids.length > 25 || ids.some((id) => id.length > 160)) {
+    const error = new Error('Invalid game IDs');
+    error.status = 400;
+    throw error;
+  }
+  const lookupIgdb = process.env.IGDB_CLIENT_ID && process.env.IGDB_CLIENT_SECRET ? lookupGame : undefined;
+  return readGameInfo(await readBot(), ids, lookupIgdb);
+});

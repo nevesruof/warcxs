@@ -18,24 +18,18 @@ let state = {
   manualPlaybackDetails: null,
 };
 let entered = false;
-let localAudio;
 let player;
 let playerReady;
 let generation = 0;
 let progressTimer;
 let spotifyResume;
 let lastVolume = state.volume || 30;
-let localBlocked = false;
 let youtubeBlocked = false;
-let audioContext;
-let localGain;
 let engineHost;
 let embedPanel;
 let candidates = [];
 let autoplayWatch;
 
-let presenceKnown = false;
-let ownerSpotify = null;
 const trackRequests = new Map();
 
 function resolveTrack(track, artist) {
@@ -52,59 +46,14 @@ function resolveTrack(track, artist) {
 }
 
 export function updateAudioPresence(presence) {
-  presenceKnown = true;
   const spotify = presence?.listening_to_spotify ? presence.spotify : null;
-  ownerSpotify = spotify?.timestamps?.end > Date.now() ? spotify : null;
-  if (ownerSpotify) {
-    localAudio?.pause();
-    if (!state.isAudioDisabled)
-      void resolveTrack(ownerSpotify.song, ownerSpotify.artist).catch(() => {});
-  } else {
-    resumeLocal();
-  }
+  if (spotify?.timestamps?.end > Date.now() && !state.isAudioDisabled)
+    void resolveTrack(spotify.song, spotify.artist).catch(() => {});
 }
 
 function publish(patch) {
   state = { ...state, ...patch };
   listeners.forEach((listener) => listener());
-}
-
-function getLocalAudio() {
-  if (!localAudio) {
-    localAudio = new Audio('/assets/entry-music.mp3');
-    localAudio.loop = true;
-    localAudio.preload = 'auto';
-    localAudio.volume = state.volume / 100;
-  }
-  return localAudio;
-}
-
-// iOS ignores HTMLMediaElement.volume, so the level is applied through a GainNode.
-// The graph is only created during a user gesture so the context can actually start.
-function attachGain() {
-  if (localGain || state.isAudioDisabled) return;
-  try {
-    const Context = window.AudioContext || window.webkitAudioContext;
-    if (!Context) return;
-    audioContext = new Context();
-    const source = audioContext.createMediaElementSource(getLocalAudio());
-    localGain = audioContext.createGain();
-    localGain.gain.value = state.volume / 100;
-    source.connect(localGain).connect(audioContext.destination);
-    getLocalAudio().volume = 1;
-  } catch {
-    localGain = null;
-  }
-}
-
-function applyLocalLevel() {
-  const level = state.isAudioDisabled ? 0 : state.volume / 100;
-  const audio = localAudio;
-  if (!audio) return;
-  if (localGain) localGain.gain.value = level;
-  else audio.volume = level;
-  audio.muted = level === 0;
-  if (level === 0) audio.pause();
 }
 
 function applyPlayerLevel() {
@@ -120,56 +69,16 @@ function applyPlayerLevel() {
   }
 }
 
-function setLocalMetadata() {
-  if (!navigator.mediaSession || !window.MediaMetadata) return;
-  navigator.mediaSession.metadata = new window.MediaMetadata({
-    title: 'cheatinformer',
-    artist: 'iTake',
-    artwork: [
-      {
-        src: new URL('/assets/itake-avatar.jpeg', location.origin).href,
-        type: 'image/jpeg',
-      },
-    ],
-  });
-}
-
-function resumeLocal() {
-  if (
-    !entered ||
-    !presenceKnown ||
-    ownerSpotify ||
-    state.isAudioDisabled ||
-    state.volume === 0 ||
-    state.isClipPlaying ||
-    state.isPlaybackInterrupted ||
-    state.playbackSource !== 'none'
-  )
-    return;
-  setLocalMetadata();
-  audioContext?.resume?.().catch(() => {});
-  getLocalAudio()
-    .play()
-    .then(() => {
-      localBlocked = false;
-    })
-    .catch(() => {
-      localBlocked = true;
-    });
-}
-
 function setVolume(value) {
   if (state.isAudioDisabled) return;
   const volume = clamp(value);
   if (volume) lastVolume = volume;
   publish({ volume });
   storeValue('site-global-volume', volume);
-  applyLocalLevel();
   applyPlayerLevel();
   mediaElements.forEach((base, element) => {
     element.volume = (base * volume) / 100;
   });
-  if (volume) resumeLocal();
 }
 
 function removeEmbed() {
@@ -236,7 +145,6 @@ function loadYouTube() {
 function resumeOnFailure() {
   clearTimeout(autoplayWatch);
   publish({ isAudioPlaying: false, playbackSource: 'none', activeVideoId: null });
-  resumeLocal();
 }
 
 async function ensurePlayer() {
@@ -272,7 +180,6 @@ async function ensurePlayer() {
                 if (playing) {
                   clearTimeout(autoplayWatch);
                   youtubeBlocked = false;
-                  getLocalAudio().pause();
                 }
                 publish({ isAudioPlaying: playing });
                 if (event.data === YT.PlayerState.ENDED)
@@ -337,7 +244,6 @@ function videoId(value) {
 async function playVideo(value, startTime = 0, source = 'manual', { keepCandidates = false } = {}) {
   const id = videoId(value);
   if (!id || state.isAudioDisabled || state.volume === 0 || !entered) return false;
-  localAudio?.pause();
   if (!keepCandidates) candidates = [];
   const request = ++generation;
   const requestedAt = Date.now();
@@ -381,14 +287,12 @@ function openSpotifyEmbed(url) {
   frame.width = '100%';
   frame.setAttribute('allowtransparency', 'true');
   panel.querySelector('#embedded-player-content').replaceWith(frame);
-  getLocalAudio().pause();
   publish({ playbackSource: 'manual', isAudioPlaying: false, activeVideoId: null });
   return true;
 }
 
 async function playTrack(track, artist, startTime = 0, source = 'spotify') {
   if (state.isAudioDisabled || state.volume === 0 || !entered) return false;
-  localAudio?.pause();
   const request = ++generation;
   const requestedAt = Date.now();
   try {
@@ -404,7 +308,6 @@ async function playTrack(track, artist, startTime = 0, source = 'spotify') {
     if (request !== generation) return false;
   }
   if (source === 'manual') return openSpotifyEmbed(state.manualPlaybackDetails?.spotifyUrl);
-  resumeLocal();
   return false;
 }
 
@@ -432,7 +335,6 @@ function stopPlayback({ resumeSpotify = false } = {}) {
     if (request.videoUrlOrId) void playVideo(request.videoUrlOrId, offset, 'spotify');
     else void playTrack(request.track, request.artist, offset, 'spotify');
   }
-  resumeLocal();
 }
 
 function setManualPlaybackDetails(value) {
@@ -450,10 +352,6 @@ const actions = {
   primePlayer() {
     if (state.isAudioDisabled) return false;
     entered = true;
-    getLocalAudio();
-    attachGain();
-    applyLocalLevel();
-    resumeLocal();
     void ensurePlayer().catch(() => {});
     return true;
   },
@@ -463,7 +361,6 @@ const actions = {
   // "Enter without audio": nothing may sound, from any source, and the volume control disappears.
   disableAudioForever() {
     entered = true;
-    localBlocked = false;
     spotifyResume = null;
     generation++;
     candidates = [];
@@ -478,7 +375,6 @@ const actions = {
       playbackTime: 0,
       playbackDuration: 0,
     });
-    applyLocalLevel();
     try {
       player?.stopVideo?.();
       player?.mute?.();
@@ -510,16 +406,12 @@ const actions = {
   },
   setClipPlaybackActive(active) {
     publish({ isClipPlaying: active });
-    if (active) getLocalAudio().pause();
-    else resumeLocal();
   },
   finishClipPlayback() {
     publish({ isClipPlaying: false });
-    resumeLocal();
   },
   pauseForExternalMedia() {
     publish({ isPlaybackInterrupted: true });
-    getLocalAudio().pause();
     player?.pauseVideo?.();
     clearTimeout(autoplayWatch);
   },
@@ -527,7 +419,6 @@ const actions = {
     publish({ isPlaybackInterrupted: false });
     if (state.isAudioDisabled) return;
     if (state.playbackSource !== 'none') player?.playVideo?.();
-    else resumeLocal();
   },
   registerMediaElement(element, { baseVolume = 1 } = {}) {
     mediaElements.set(element, clamp(baseVolume, 1));
@@ -546,15 +437,11 @@ export function createAudioComponents(React, jsx) {
   function AudioProvider({ children }) {
     const current = React.useSyncExternalStore(subscribe, () => state);
     React.useEffect(() => {
-      const retry = () => {
-        if (localBlocked) resumeLocal();
-        retryYoutube();
-      };
-      document.addEventListener('pointerdown', retry);
-      document.addEventListener('keydown', retry);
+      document.addEventListener('pointerdown', retryYoutube);
+      document.addEventListener('keydown', retryYoutube);
       return () => {
-        document.removeEventListener('pointerdown', retry);
-        document.removeEventListener('keydown', retry);
+        document.removeEventListener('pointerdown', retryYoutube);
+        document.removeEventListener('keydown', retryYoutube);
       };
     }, []);
     return jsx(Context.Provider, { value: { ...current, ...actions }, children });

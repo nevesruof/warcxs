@@ -1,4 +1,5 @@
 import { profileFetch as fetch } from '../services/profile-api.js';
+import { activityGameKey, hasGameDetails } from '../services/game-info.js';
 import {
   C as e,
   S as t,
@@ -1962,7 +1963,7 @@ function Ze(e, t = ``) {
     i = typeof e?.icon == `string` ? e.icon : null,
     a = typeof e?.name == `string` && e.name.trim() ? e.name.trim() : n.name,
     o =
-      e?.source === `igdb` || e?.source === `discord` || e?.source === `placeholder`
+      [`igdb`, `steam`, `roblox`, `discord`, `placeholder`].includes(e?.source)
         ? e.source
         : a === `Unknown Game`
           ? `placeholder`
@@ -3670,31 +3671,6 @@ function qt(e) {
 function Jt(e) {
   return typeof e != `number` || Number.isNaN(e) ? null : `${Math.round(e)}%`;
 }
-function Yt(e, t) {
-  return e.length === 0
-    ? (0, jsxRuntime.jsx)(`span`, {
-        className: `text-white/35`,
-        children: t,
-      })
-    : e.join(`, `);
-}
-function Xt(e) {
-  return [
-    `steampowered.com`,
-    `steamcommunity.com`,
-    `epicgames.com`,
-    `store.epicgames.com`,
-    `playstation.com`,
-    `store.playstation.com`,
-    `xbox.com`,
-    `microsoft.com`,
-    `nintendo.com`,
-    `gog.com`,
-    `itch.io`,
-    `ea.com`,
-    `ubisoft.com`,
-  ].some((t) => e === t || e.endsWith(`.${t}`));
-}
 function Zt(e) {
   let t = (e || ``).toLowerCase();
   return t === `x.com` || t.endsWith(`.x.com`) || t.includes(`twitter.com`)
@@ -3727,16 +3703,40 @@ function Qt(e) {
   let t = e?.websites || [],
     n = new Set();
   return t
-    .filter((e) => {
-      let t = (e.hostname || ``).toLowerCase();
-      return !t || !Xt(t);
-    })
+    .filter((e) => /^https?:\/\//i.test(e.url))
     .map((e) => ({
       ...e,
       label: Zt(e.hostname),
     }))
     .filter((e) => !n.has(e.label) && (n.add(e.label), !0))
     .slice(0, 5);
+}
+function GameFacts({ game }) {
+  const facts = [
+    ['Release', qt(game.releaseDate), D],
+    ['Platforms', game.platforms?.map((platform) => platform.abbreviation || platform.name).join(', '), F],
+    ['Genres', game.genres?.join(', '), J],
+    ['Developers', game.developers?.join(', '), E],
+    ['Publishers', game.publishers?.join(', '), E],
+    ['Modes', game.gameModes?.join(', '), J],
+    ['Perspective', game.playerPerspectives?.join(', '), I],
+  ].filter(([, value]) => value);
+  if (!facts.length) return null;
+  return (0, jsxRuntime.jsx)(`aside`, {
+    className: `rounded-[22px] border border-white/10 bg-white/[0.04] p-5`,
+    children: (0, jsxRuntime.jsx)(`div`, {
+      className: `space-y-5 text-sm text-white/65`,
+      children: facts.map(([label, value, Icon]) => (0, jsxRuntime.jsxs)(`div`, {
+        children: [
+          (0, jsxRuntime.jsxs)(`div`, {
+            className: `mb-2 flex items-center gap-2 text-sm font-medium text-white`,
+            children: [(0, jsxRuntime.jsx)(Icon, { className: `h-4 w-4 text-white/60` }), label],
+          }),
+          (0, jsxRuntime.jsx)(`p`, { children: value }),
+        ],
+      }, label)),
+    }),
+  });
 }
 var $t = ({
     game: e,
@@ -3746,7 +3746,8 @@ var $t = ({
     note: i,
     tags: o = [],
   }) => {
-    let [s, c] = (0, React.useState)(null),
+    let dialogRef = (0, React.useRef)(null),
+      [s, c] = (0, React.useState)(null),
       [l, u] = (0, React.useState)(0),
       [d, f] = (0, React.useState)(0),
       p = [e?.bannerUrl, e?.screenshots?.[0], e?.coverUrl, e?.iconUrl].filter((e) => !!e),
@@ -3758,32 +3759,17 @@ var $t = ({
     }, [e?.id, e?.bannerUrl, e?.coverUrl, e?.iconUrl, e?.screenshots]),
       (0, React.useEffect)(() => {
         if (!t) return;
-        let e = document.body.style.overflow;
+        let e = document.body.style.overflow,
+          previousFocus = document.activeElement;
         return (
           (document.body.style.overflow = `hidden`),
+          dialogRef.current?.focus({ preventScroll: true }),
           () => {
             document.body.style.overflow = e;
+            previousFocus?.focus({ preventScroll: true });
           }
         );
       }, [t]),
-      (0, React.useEffect)(() => {
-        if (!t) return;
-        let e = (e) => {
-          if (e.key === `Escape`) {
-            if (s) {
-              c(null);
-              return;
-            }
-            n();
-          }
-        };
-        return (
-          window.addEventListener(`keydown`, e),
-          () => {
-            window.removeEventListener(`keydown`, e);
-          }
-        );
-      }, [s, t, n]),
       (0, React.useEffect)(() => {
         !t && s && c(null);
       }, [s, t]));
@@ -3794,11 +3780,11 @@ var $t = ({
       S = Qt(e),
       C = e?.screenshots?.slice(0, 6) || [],
       T = e?.summary || e?.storyline || null;
-    return (0, jsxRuntime.jsx)(AnimatePresence, {
+    return (0, ve.createPortal)((0, jsxRuntime.jsx)(AnimatePresence, {
       children:
         t && e
           ? (0, jsxRuntime.jsxs)(motion.div, {
-              className: `fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto px-3 py-4 sm:items-center sm:px-6 sm:py-6`,
+              className: `game-details-overlay fixed inset-0 flex items-start justify-center overflow-y-auto px-3 py-4 sm:items-center sm:px-6 sm:py-6`,
               initial: {
                 opacity: 0,
               },
@@ -3809,9 +3795,16 @@ var $t = ({
                 opacity: 0,
               },
               onClick: n,
+              onKeyDown: (event) => {
+                if (event.key !== `Escape`) return;
+                event.preventDefault();
+                event.stopPropagation();
+                if (s) c(null);
+                else n();
+              },
               children: [
                 (0, jsxRuntime.jsx)(motion.div, {
-                  className: `absolute inset-0 bg-[rgba(4,3,10,0.78)] backdrop-blur-xl`,
+                  className: `fixed inset-0 bg-[rgba(4,3,10,0.78)] backdrop-blur-xl`,
                   initial: {
                     opacity: 0,
                   },
@@ -3844,6 +3837,11 @@ var $t = ({
                     stiffness: 220,
                     damping: 26,
                   },
+                  role: `dialog`,
+                  ref: dialogRef,
+                  tabIndex: -1,
+                  'aria-modal': true,
+                  'aria-label': `${e.name} game details`,
                   onClick: (e) => e.stopPropagation(),
                   children: [
                     g
@@ -4036,7 +4034,7 @@ var $t = ({
                                         })
                                       : (0, jsxRuntime.jsx)(`p`, {
                                           className: `text-sm text-white/40`,
-                                          children: `No summary is available from IGDB for this game yet.`,
+                                          children: `No summary is available for this game yet.`,
                                         }),
                                   ],
                                 }),
@@ -4079,145 +4077,7 @@ var $t = ({
                                   : null,
                               ],
                             }),
-                            (0, jsxRuntime.jsx)(`aside`, {
-                              className: `rounded-[22px] border border-white/10 bg-white/[0.04] p-5`,
-                              children: (0, jsxRuntime.jsxs)(`div`, {
-                                className: `space-y-5 text-sm text-white/65`,
-                                children: [
-                                  (0, jsxRuntime.jsxs)(`div`, {
-                                    children: [
-                                      (0, jsxRuntime.jsxs)(`div`, {
-                                        className: `mb-2 flex items-center gap-2 text-sm font-medium text-white`,
-                                        children: [
-                                          (0, jsxRuntime.jsx)(D, {
-                                            className: `h-4 w-4 text-white/60`,
-                                          }),
-                                          (0, jsxRuntime.jsx)(`span`, {
-                                            children: `Release`,
-                                          }),
-                                        ],
-                                      }),
-                                      (0, jsxRuntime.jsx)(`p`, {
-                                        children: v || `Unknown release date`,
-                                      }),
-                                    ],
-                                  }),
-                                  (0, jsxRuntime.jsxs)(`div`, {
-                                    children: [
-                                      (0, jsxRuntime.jsxs)(`div`, {
-                                        className: `mb-2 flex items-center gap-2 text-sm font-medium text-white`,
-                                        children: [
-                                          (0, jsxRuntime.jsx)(F, {
-                                            className: `h-4 w-4 text-white/60`,
-                                          }),
-                                          (0, jsxRuntime.jsx)(`span`, {
-                                            children: `Platforms`,
-                                          }),
-                                        ],
-                                      }),
-                                      (0, jsxRuntime.jsx)(`p`, {
-                                        children: Yt(b, `Unknown platforms`),
-                                      }),
-                                    ],
-                                  }),
-                                  (0, jsxRuntime.jsxs)(`div`, {
-                                    children: [
-                                      (0, jsxRuntime.jsxs)(`div`, {
-                                        className: `mb-2 flex items-center gap-2 text-sm font-medium text-white`,
-                                        children: [
-                                          (0, jsxRuntime.jsx)(J, {
-                                            className: `h-4 w-4 text-white/60`,
-                                          }),
-                                          (0, jsxRuntime.jsx)(`span`, {
-                                            children: `Genres`,
-                                          }),
-                                        ],
-                                      }),
-                                      (0, jsxRuntime.jsx)(`p`, {
-                                        children: Yt(x, `Unknown genres`),
-                                      }),
-                                    ],
-                                  }),
-                                  (0, jsxRuntime.jsxs)(`div`, {
-                                    children: [
-                                      (0, jsxRuntime.jsxs)(`div`, {
-                                        className: `mb-2 flex items-center gap-2 text-sm font-medium text-white`,
-                                        children: [
-                                          (0, jsxRuntime.jsx)(E, {
-                                            className: `h-4 w-4 text-white/60`,
-                                          }),
-                                          (0, jsxRuntime.jsx)(`span`, {
-                                            children: `Developers`,
-                                          }),
-                                        ],
-                                      }),
-                                      (0, jsxRuntime.jsx)(`p`, {
-                                        children: Yt(e.developers, `Unknown developers`),
-                                      }),
-                                    ],
-                                  }),
-                                  (0, jsxRuntime.jsxs)(`div`, {
-                                    children: [
-                                      (0, jsxRuntime.jsxs)(`div`, {
-                                        className: `mb-2 flex items-center gap-2 text-sm font-medium text-white`,
-                                        children: [
-                                          (0, jsxRuntime.jsx)(E, {
-                                            className: `h-4 w-4 text-white/60`,
-                                          }),
-                                          (0, jsxRuntime.jsx)(`span`, {
-                                            children: `Publishers`,
-                                          }),
-                                        ],
-                                      }),
-                                      (0, jsxRuntime.jsx)(`p`, {
-                                        children: Yt(e.publishers, `Unknown publishers`),
-                                      }),
-                                    ],
-                                  }),
-                                  (0, jsxRuntime.jsxs)(`div`, {
-                                    children: [
-                                      (0, jsxRuntime.jsxs)(`div`, {
-                                        className: `mb-2 flex items-center gap-2 text-sm font-medium text-white`,
-                                        children: [
-                                          (0, jsxRuntime.jsx)(J, {
-                                            className: `h-4 w-4 text-white/60`,
-                                          }),
-                                          (0, jsxRuntime.jsx)(`span`, {
-                                            children: `Modes`,
-                                          }),
-                                        ],
-                                      }),
-                                      (0, jsxRuntime.jsx)(`p`, {
-                                        children: Yt(e.gameModes, `Unknown game modes`),
-                                      }),
-                                    ],
-                                  }),
-                                  e.playerPerspectives?.length > 0
-                                    ? (0, jsxRuntime.jsxs)(`div`, {
-                                        children: [
-                                          (0, jsxRuntime.jsxs)(`div`, {
-                                            className: `mb-2 flex items-center gap-2 text-sm font-medium text-white`,
-                                            children: [
-                                              (0, jsxRuntime.jsx)(I, {
-                                                className: `h-4 w-4 text-white/60`,
-                                              }),
-                                              (0, jsxRuntime.jsx)(`span`, {
-                                                children: `Perspective`,
-                                              }),
-                                            ],
-                                          }),
-                                          (0, jsxRuntime.jsx)(`p`, {
-                                            children: Yt(
-                                              e.playerPerspectives,
-                                              `Unknown perspective`,
-                                            ),
-                                          }),
-                                        ],
-                                      })
-                                    : null,
-                                ],
-                              }),
-                            }),
+                            (0, jsxRuntime.jsx)(GameFacts, { game: e }),
                           ],
                         }),
                       ],
@@ -4286,7 +4146,7 @@ var $t = ({
               ],
             })
           : null,
-    });
+    }), document.body);
   },
   en = `/.netlify/functions/getSpotifyLyrics`,
   tn = `lyrics-v5`,
@@ -7032,7 +6892,6 @@ var ContributionTooltip = ({ day: e, children: t }) => {
         }),
       ],
     }),
-  gi = /^\d{17,20}$/,
   vi = [
     {
       preferred: [`Rainbow Six Siege`],
@@ -7158,10 +7017,6 @@ function Ai(e) {
         e.spotify.timestamps?.end || 0,
       ].join(`::`);
 }
-function ji(e) {
-  let t = String(e || ``).trim();
-  return gi.test(t) ? t : null;
-}
 function Mi(e) {
   return e
     .toLowerCase()
@@ -7215,10 +7070,7 @@ function Ri(e) {
   return Number.isFinite(t) ? t : null;
 }
 function zi(e) {
-  let t = String(e.applicationId || ``).trim();
-  if (t) return `app:${t}`;
-  let n = String(e.name || ``).trim();
-  return n ? `name:${Mi(n)}` : null;
+  return e.name ? activityGameKey(e) : null;
 }
 function Bi(e) {
   let t = String(e.name || ``).trim();
@@ -7230,6 +7082,8 @@ function Bi(e) {
     name: t,
     type: 0,
     applicationId: e.applicationId || void 0,
+    details: e.details,
+    state: e.state,
     startedAt: r,
     lastSeenAt: n,
     discordGameActivity: e,
@@ -7243,7 +7097,8 @@ function Vi(e, t) {
       i = {
         ...t,
       };
-    e ? n.set(e, i) : r.push(i);
+    if (!e) r.push(i);
+    else if (!n.has(e) || n.get(e).lastSeenAt < i.lastSeenAt) n.set(e, i);
   }
   for (let e of t) {
     let t = Bi(e);
@@ -7310,7 +7165,7 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
         i,
       ],
     }),
-  ActivityCard = ({ activity: e }) => {
+  ActivityCard = ({ activity: e, gameInfo, onSelect }) => {
     let [t, n] = (0, React.useState)(``);
     (0, React.useEffect)(() => {
       if (!e.timestamps?.start) return;
@@ -7319,7 +7174,7 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
       let r = setInterval(t, 1e3);
       return () => clearInterval(r);
     }, [e.timestamps?.start]);
-    let r = yi(e.assets?.large_image, e.application_id),
+    let r = yi(e.assets?.large_image, e.application_id) || gameInfo?.iconUrl,
       i = e.assets?.small_image ? yi(e.assets.small_image, e.application_id) : void 0,
       o = e.type === 0 ? `Playing` : e.type === 2 ? `Listening to` : `Activity`;
     return (0, jsxRuntime.jsxs)(motion.div, {
@@ -7392,6 +7247,14 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
                       children: e.state,
                     })
                   : null,
+                hasGameDetails(gameInfo)
+                  ? (0, jsxRuntime.jsx)(`button`, {
+                      type: `button`,
+                      className: `game-details-trigger`,
+                      onClick: () => onSelect(gameInfo, e),
+                      children: `Open details`,
+                    })
+                  : null,
               ],
             }),
             t
@@ -7417,7 +7280,7 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
     let i =
         Me(e.largeImage, e.applicationId) ||
         (t?.iconUrl && !t.iconUrl.includes(`dcdn.dstn.to/app-icons`) ? t.iconUrl : void 0),
-      o = t?.source === `igdb`,
+      o = hasGameDetails(t),
       s = Ui(e, n),
       c = Ei(e),
       l = Di(e),
@@ -7689,7 +7552,10 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
       ),
       [h, _] = (0, React.useState)(null),
       v = ki(e.activities || []),
-      y = Ai(e);
+      y = Ai(e),
+      gameSignature = [...o, ...c, ...(e.activities || [])]
+        .map((activity) => `${activityGameKey(activity)}:${activity.details || ''}`)
+        .join('|');
     (0, React.useEffect)(() => {
       let e = (e) => {
         at = e.detail;
@@ -7752,23 +7618,25 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
         );
       }, [y]),
       (0, React.useEffect)(() => {
+        let active = true;
         let t = [
-          ...o.map((e) => ji(e.applicationId)).filter(Boolean),
-          ...c.map((e) => ji(e.applicationId)).filter(Boolean),
+          ...o.filter((activity) => activity.type === 0).map(activityGameKey),
+          ...c.map(activityGameKey),
           ...(e.activities || [])
             .filter((e) => e.type === 0)
-            .map((e) => ji(e.application_id))
-            .filter(Boolean),
+            .map(activityGameKey),
         ];
         t.length !== 0 &&
-          tt([...new Set(t)]).then((e) => {
+          tt([...new Set(t)], true).then((e) => {
+            if (!active) return;
             m((t) => {
               let n = new Map(t);
               for (let t of e) n.set(t.id, Ze(t, t.id));
               return n;
             });
           });
-      }, [o, c, e.activities]));
+        return () => { active = false; };
+      }, [gameSignature]));
     let x = e.activities?.filter((e) => e.type !== 4 && e.name !== `Spotify`) || [],
       S = g(e) && e.spotify,
       C = Vi(o, c),
@@ -7817,6 +7685,8 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
                               ActivityCard,
                               {
                                 activity: e,
+                                gameInfo: p.get(activityGameKey(e)),
+                                onSelect: (game, activity) => k(game, `Currently playing`, activity.details || activity.state),
                               },
                               e.id || e.name,
                             ),
@@ -7855,7 +7725,7 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
                         children: (0, jsxRuntime.jsx)(`div`, {
                           className: `flex flex-col gap-0.5`,
                           children: O.map((e, n) => {
-                            let r = ji(e.applicationId),
+                            let r = activityGameKey(e),
                               i = (r && p.get(r)) || null;
                             return (0, jsxRuntime.jsx)(
                               ActivityDetails,

@@ -12,6 +12,23 @@
 .profile-page {
   overflow-x: clip;
 }
+.game-details-trigger {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #a1a1a6;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.game-details-trigger:hover {
+  color: #fff;
+}
 
 /* Keep mobile sections in document flow, including the full contribution graph. */
 @media (max-width: 1099px) {
@@ -216,6 +233,9 @@ html {
 }
 .performance-toast {
   top: max(76px, calc(env(safe-area-inset-top) + 60px));
+}
+.game-details-overlay {
+  z-index: 10001;
 }
 .now-playing-dock .spotify-now-playing {
   transition:

@@ -395,11 +395,7 @@
       "followers": 2248,
       "rap": 24092,
       "collectibles": [],
-      "lastPlayedGame": {
-        "name": "🐰 8-Ball Pool Classic 🎱",
-        "url": "https://www.roblox.com/users/profile?username=zahidtql12",
-        "iconUrl": "/assets/8ball-pool-icon.png"
-      }
+      "lastPlayedGame": null
     },
     "gameActivity": {
       "activities": [],

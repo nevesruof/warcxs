@@ -12,9 +12,6 @@ globalThis.fetch = async () => new Response(JSON.stringify(playbackReply));
 globalThis.location = { origin: 'https://example.test' };
 globalThis.window = globalThis;
 Object.defineProperty(globalThis, 'navigator', { value: { mediaSession: {} }, configurable: true });
-globalThis.MediaMetadata = class {
-  constructor(value) { Object.assign(this, value); }
-};
 
 const audios = [];
 class FakeAudio {
@@ -106,28 +103,17 @@ class FakePlayer {
 globalThis.YT = { Player: FakePlayer, PlayerState: { PLAYING: 1, ENDED: 0 } };
 
 let scenario = 0;
-async function freshAudio({ webAudio = false, presenceKnown = true } = {}) {
+async function freshAudio() {
   scenario++;
   audios.length = 0;
   FakePlayer.instances.length = 0;
   body.children.length = 0;
   head.children.length = 0;
   storage.clear();
-  delete globalThis.AudioContext;
-  if (webAudio) {
-    globalThis.AudioContext = class {
-      state = 'running';
-      destination = {};
-      resume = async () => {};
-      createMediaElementSource = () => ({ connect: (node) => ({ connect: () => node }) });
-      createGain = () => ({ gain: { value: 1 }, connect: () => ({}) });
-    };
-  }
   delete globalThis.YT;
   globalThis.YT = { Player: FakePlayer, PlayerState: { PLAYING: 1, ENDED: 0 } };
   globalThis.onYouTubeIframeAPIReady = undefined;
   const { createAudioComponents, updateAudioPresence } = await import(`../src/services/audio.js?case=${scenario}`);
-  if (presenceKnown) updateAudioPresence({ listening_to_spotify: false });
   const React = {
     createContext: () => ({ Provider: 'provider' }),
     useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
@@ -169,27 +155,24 @@ test('embed-blocked videos fall through to the next search result', async () => 
   audio().stopPlayback();
 });
 
-test('volume 0 silences the local track and blocks streaming; raising it resumes', async () => {
+test('volume 0 mutes the streaming engine; raising it restores the selected level', async () => {
   const audio = await freshAudio();
   audio().primePlayer();
-  const [local] = audios;
-  assert.equal(local.paused, false);
+  await settle();
+  const [engine] = FakePlayer.instances;
   audio().setVolume(0);
-  assert.equal(local.paused, true);
-  assert.equal(local.muted, true);
+  assert.equal(engine.muted, true);
   assert.equal(await audio().playTrack('Song', 'Artist', 0, 'spotify'), false);
   audio().setVolume(40);
-  assert.equal(local.paused, false);
-  assert.equal(local.muted, false);
-  assert.equal(local.volume, 0.4);
-  assert.match(navigator.mediaSession.metadata.artwork[0].src, /itake-avatar\.jpeg$/);
+  assert.equal(engine.muted, false);
+  assert.equal(engine.volumeValue, 40);
+  assert.equal(await audio().playTrack('Song', 'Artist', 0, 'spotify'), true);
+  audio().stopPlayback();
 });
 
-test('entry waits for presence and keeps local audio paused throughout Spotify startup', async () => {
-  const audio = await freshAudio({ presenceKnown: false });
+test('entry and playback transitions never create or resume a local audio fallback', async () => {
+  const audio = await freshAudio();
   audio().primePlayer();
-  const [local] = audios;
-  assert.equal(local.plays, 0);
   audio.updatePresence({
     listening_to_spotify: true,
     spotify: { song: 'Song', artist: 'Artist', timestamps: { end: Date.now() + 60000 } },
@@ -197,21 +180,17 @@ test('entry waits for presence and keeps local audio paused throughout Spotify s
   audio().setVolume(70);
   audio().resumeAfterExternalMedia();
   await settle();
-  assert.equal(local.plays, 0);
+  assert.equal(FakePlayer.instances[0].loaded.length, 0);
+  await audio().playTrack('Song', 'Artist', 0, 'spotify');
+  audio().stopPlayback();
   audio.updatePresence({ listening_to_spotify: false });
-  assert.equal(local.paused, false);
+  audio().setClipPlaybackActive(true);
+  audio().finishClipPlayback();
+  audio().pauseForExternalMedia();
+  audio().resumeAfterExternalMedia();
+  assert.equal(audios.length, 0);
+  assert.equal(audio().playbackSource, 'none');
   audio().disableAudioForever();
-});
-
-test('gain node carries the level where element.volume is ignored (iOS)', async () => {
-  const audio = await freshAudio({ webAudio: true });
-  audio().primePlayer();
-  const [local] = audios;
-  audio().setVolume(0);
-  assert.equal(local.muted, true);
-  audio().setVolume(40);
-  assert.equal(local.volume, 1);
-  assert.equal(local.muted, false);
 });
 
 test('enter without audio: nothing sounds, volume control is flagged hidden, engine never starts', async () => {
@@ -237,6 +216,6 @@ test('silent entry after audio was primed mutes everything already running', asy
   const [engine] = FakePlayer.instances;
   assert.equal(engine.muted, true);
   assert.ok(engine.stopped > 0);
-  assert.equal(audios[0].muted, true);
+  assert.equal(audios.length, 0);
   assert.equal(audio().playbackSource, 'none');
 });
