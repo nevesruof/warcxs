@@ -31,7 +31,7 @@ Parte de `.env.example` y configura las variables en Vercel o en tu entorno de s
 
 | Variable | Uso |
 | --- | --- |
-| `ACTIVITY_BOT_URL` | Opcional: reemplaza la URL del bot existente. Sin esta variable se conserva la conexión anterior. |
+| `ACTIVITY_BOT_URL` | Opcional: reemplaza `http://fi10.bot-hosting.cloud:26022/api/activity`. Si está configurada en Vercel, actualízala también al cambiar de servidor. |
 | `ACTIVITY_BOT_TOKEN` | Token opcional para ese bot. |
 | `DISCORD_BOT_TOKEN` | Token de un bot de Discord para actualizar foto y banner directamente cada minuto. Se mantiene únicamente en el servidor. |
 | `YOUTUBE_API_KEY` | Habilita audio sincronizado dentro de la página. |

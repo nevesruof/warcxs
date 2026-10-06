@@ -66,7 +66,7 @@ test('Existing bot powers presence and history without environment configuration
   assert.equal(recent.code, 200);
   assert.equal(recent.body.recentActivities[0].name, 'Minecraft');
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'http://fi12.bot-hosting.cloud:25545/api/activity');
+  assert.equal(calls[0].url, 'http://fi10.bot-hosting.cloud:26022/api/activity');
   assert.deepEqual(calls[0].options.headers, {});
   process.env.ACTIVITY_BOT_URL = '  ';
   await readBot();
