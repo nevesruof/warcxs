@@ -154,14 +154,12 @@
 }
 
 /* Scroll within the existing profile card, including touch and keyboard. */
-.bento-cell--profile > .profile-scroll-panel {
+.bento-cell--profile .profile-scroll-panel {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior-y: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: #ffffff26 transparent;
 }
 .profile-scroll-panel:focus-visible {
   outline: 1px solid #ffffff99;
@@ -185,12 +183,6 @@
 
 html {
   scroll-behavior: smooth;
-  scrollbar-color: #ffffff26 transparent;
-  scrollbar-width: thin;
-}
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #ffffff26 transparent;
 }
 *::-webkit-scrollbar {
   width: 5px;
@@ -210,6 +202,88 @@ html {
   display: none;
   width: 0;
   height: 0;
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #ffffff26 transparent;
+  }
+}
+
+.clean-scroll-frame {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.clean-scroll-frame[data-scroll-axis='y'] {
+  flex: 1;
+  height: 100%;
+}
+[data-clean-scroll] {
+  scrollbar-width: none !important;
+  scroll-behavior: auto;
+}
+[data-clean-scroll]::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+[data-clean-scroll='y'] {
+  height: 100%;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+}
+.clean-scrollbar {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+  user-select: none;
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+.clean-scrollbar[data-overflow='false'] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+[data-scroll-axis='y'] > .clean-scrollbar {
+  top: 8px;
+  right: 3px;
+  bottom: 8px;
+  width: 9px;
+}
+.clean-scrollbar__thumb {
+  position: absolute;
+  display: block;
+  border-radius: 999px;
+  background: #ffffff26;
+  transition: background-color 180ms ease;
+}
+.clean-scrollbar:hover .clean-scrollbar__thumb,
+.clean-scrollbar:focus-visible .clean-scrollbar__thumb {
+  background: #ffffff40;
+}
+[data-scroll-axis='y'] .clean-scrollbar__thumb {
+  width: 3px;
+  right: 0;
+}
+[data-scroll-axis='x'] > .clean-scrollbar {
+  right: 0;
+  left: 0;
+  bottom: 0;
+  height: 8px;
+}
+[data-scroll-axis='x'] .clean-scrollbar__thumb {
+  height: 3px;
+  bottom: 2px;
+}
+.github-contribution-graph > .clean-scroll-frame {
+  flex: none;
+  padding-bottom: 8px;
+}
+.bento-cell--github > .github-commit-strip {
+  flex: none;
+  overflow: hidden;
 }
 .profile-scroll-panel,
 .music-carousel,

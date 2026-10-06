@@ -89,6 +89,10 @@ globalThis.document = {
     documentListeners.get(type)?.delete(listener);
   },
 };
+globalThis.addEventListener = (type, listener) =>
+  document.addEventListener(type, listener);
+globalThis.removeEventListener = (type, listener) =>
+  document.removeEventListener(type, listener);
 
 class FakePlayer {
   static instances = [];
@@ -404,4 +408,79 @@ test("mobile playback retries on an activated click and cannot restart a stopped
   audio().stopPlayback();
   for (const listener of documentListeners.get("click")) listener();
   assert.equal(engine.played, beforeRetry + 1);
+});
+
+test("Live Spotify starts on entry, follows new songs and resumes the latest song after manual playback", async () => {
+  const audio = await freshAudio();
+  const presence = (song, elapsed = 27) => ({
+    listening_to_spotify: true,
+    spotify: {
+      track_id: song,
+      song,
+      artist: "Live Artist",
+      timestamps: {
+        start: Date.now() - elapsed * 1000,
+        end: Date.now() + 120000,
+      },
+    },
+  });
+  const current = presence("Live on entry");
+  audio.updatePresence(current);
+  await settle();
+  assert.equal(FakePlayer.instances.length, 0);
+  audio().primePlayer();
+  await settle();
+  const [engine] = FakePlayer.instances;
+  assert.equal(audio().playbackSource, "spotify");
+  assert.ok(engine.loaded[0].startSeconds >= 27);
+  audio.updatePresence(current);
+  await settle();
+  assert.equal(
+    engine.loaded.length,
+    1,
+    "Unchanged presence must not reload the stream",
+  );
+  const manual = {
+    id: "manual-priority",
+    trackName: "Manual priority",
+    artistName: "Artist",
+  };
+  await audio().toggleSong(manual);
+  const before = engine.loaded.length;
+  audio.updatePresence(presence("Next live track", 8));
+  await settle();
+  assert.equal(audio().playbackSource, "manual");
+  assert.equal(engine.loaded.length, before);
+  await audio().toggleSong(manual);
+  await settle();
+  assert.equal(audio().playbackSource, "spotify");
+  assert.ok(engine.seeks.at(-1) >= 8);
+  audio.updatePresence({ listening_to_spotify: false });
+  assert.equal(audio().playbackSource, "none");
+  audio().disableAudioForever();
+});
+
+test("A blocked live stream resumes at Spotify's current second within the next click", async () => {
+  const audio = await freshAudio();
+  audio().primePlayer();
+  audio.updatePresence({
+    listening_to_spotify: true,
+    spotify: {
+      track_id: "blocked-live",
+      song: "Blocked live track",
+      artist: "Artist",
+      timestamps: { start: Date.now() - 18000, end: Date.now() + 120000 },
+    },
+  });
+  await settle();
+  const [engine] = FakePlayer.instances;
+  engine.options.events.onAutoplayBlocked();
+  assert.equal(audio().isAutoplayBlocked, true);
+  const previousPlays = engine.played;
+  audio().retrySpotifyPlayback();
+  assert.equal(engine.played, previousPlays + 1);
+  assert.ok(engine.seeks.at(-1) >= 18);
+  assert.equal(audio().isAutoplayBlocked, false);
+  audio.updatePresence({ listening_to_spotify: false });
+  audio().disableAudioForever();
 });

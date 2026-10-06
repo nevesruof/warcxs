@@ -1,6 +1,7 @@
 import {parseVideoId, resolveTrack, prefetchTracks} from '../services/playback-cache.js';
 import { discordAvatarUrl, discordBannerUrl } from '../services/discord-profile.js';
 import { observeTooltipPosition } from './tooltip-position.js';
+import { createScrollArea } from './scroll-area.js';
 import { startBackgroundRefresh } from '../services/background-refresh.js';
 import {createRecentSongs} from './recent-songs.js';
 import {Radio as K, Pause as W, Play as G, Headphones as R, Expand as H} from './music-icons.js';
@@ -9,6 +10,7 @@ import {playbackSong, isSelectedSong, statsTrackKey, SONG_AUDIO_FIELDS} from '..
 import { profileFetch as fetch, currentProfile } from '../services/profile-api.js';
 import { activityGameKey, hasGameDetails } from '../services/game-info.js';
 import {
+  React as ScrollReact,
   C as e,
   S as t,
   T as n,
@@ -32,6 +34,7 @@ import {
   x as C,
   y as AnimatePresence,
 } from './runtime.js';
+const ScrollArea = createScrollArea(ScrollReact);
 var E = v(`Building2`, [
     [
       `path`,
@@ -1148,7 +1151,8 @@ var ve = n(e()),
       },
       z = M(),
       B = t?.badges?.length ?? 0;
-    return (0, jsxRuntime.jsxs)(motion.div, {
+    return (0, jsxRuntime.jsxs)(ScrollArea, {
+      as: motion.div,
       className: `profile-scroll-panel surface-panel relative w-full min-w-0 max-w-full overflow-hidden rounded-xl`,
       tabIndex: 0,
       'aria-label': `Discord profile`,
@@ -5986,7 +5990,8 @@ var ContributionTooltip = ({ day: e, children: t }) => {
               }),
             ],
           }),
-          (0, jsxRuntime.jsx)(`div`, {
+          (0, jsxRuntime.jsx)(ScrollArea, {
+            axis: 'x',
             ref: c,
             className: `github-contribution-graph__scroller`,
             'aria-label': `GitHub contribution graph`,
@@ -8535,552 +8540,29 @@ function Oo({
     }
   );
 }
-var ko = 0,
-  Ao = 180,
-  jo = `spotify-mobile-return-unlock`,
-  Mo = (e, t, n) => Math.min(n, Math.max(t, e)),
-  No = () =>
-    window.matchMedia(`(hover: none), (pointer: coarse)`).matches ||
-    window.navigator.maxTouchPoints > 0 ||
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
-      window.navigator.userAgent,
-    ),
-  Po = ({
-    trackId: e,
-    track: t,
-    artist: n,
-    albumArt: r,
-    youtubeVideoId: o,
-    youtubeUrl: s,
-    timestamps: c,
-    isSpotifyPlaying: u,
-    renderVisuals: d = !0,
-  }) => {
-    let f = i(),
-      [m, h] = (0, React.useState)(``),
-      { visualState: g } = Oo({
-        trackId: e,
-        videoId: parseVideoId(o || s || m || ``) || void 0,
-        track: t,
-        artist: n,
-        timestamps: c,
-        isPlaying: u,
-        reduceMotion: f.shouldDisableHeavyEffects,
-        enabled: d,
+function SpotifyPlaybackNotice() {
+  const audio = useAudioFields([
+    'playbackSource', 'isAudioDisabled', 'isAutoplayBlocked',
+  ]);
+  const blocked = audio.playbackSource === 'spotify' &&
+    !audio.isAudioDisabled && audio.isAutoplayBlocked;
+  return (0, jsxRuntime.jsx)(AnimatePresence, {
+    children: blocked ? (0, jsxRuntime.jsx)(motion.div, {
+      className: 'pointer-events-none fixed inset-x-0 bottom-5 z-[35] flex justify-center px-4 sm:hidden',
+      initial: { opacity: 0, y: 18 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: 12 },
+      transition: { duration: 0.22, ease: 'easeOut' },
+      children: (0, jsxRuntime.jsx)(motion.button, {
+        type: 'button',
+        onClick: audio.retrySpotifyPlayback,
+        className: 'pointer-events-auto inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-[rgba(12,10,24,0.92)] px-4 py-2 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.34)] backdrop-blur-xl',
+        whileTap: { scale: 0.98 },
+        children: 'Tap to resume audio',
       }),
-      {
-        playTrack: _,
-        playVideo: v,
-        updateTime: y,
-        stopPlayback: b,
-        queueSpotifyResume: S,
-        queueClipSpotifyPlayback: C,
-        isAudioDisabled: T,
-        isAudioPlaying: E,
-        isClipPlaying: D,
-        isPlaybackInterrupted: O,
-        playbackSource: k,
-        activeVideoId: A,
-      } = useAudio(),
-      j = (0, React.useRef)(``),
-      M = (0, React.useRef)(!1),
-      N = (0, React.useRef)(0),
-      P = (0, React.useRef)(null),
-      F = (0, React.useRef)(null),
-      ee = (0, React.useRef)(!1),
-      [I, L] = (0, React.useState)(!1),
-      [R, z] = (0, React.useState)(!1),
-      B = (0, React.useRef)({
-        playbackSource: k,
-        activeVideoId: A,
-      }),
-      V = (0, React.useRef)({
-        playTrack: _,
-        playVideo: v,
-        updateTime: y,
-        stopPlayback: b,
-        queueSpotifyResume: S,
-        queueClipSpotifyPlayback: C,
-      }),
-      H = () => {
-        P.current !== null && (window.clearTimeout(P.current), (P.current = null));
-      },
-      U = () => {
-        try {
-          return window.sessionStorage.getItem(jo) === `1`;
-        } catch {
-          return !1;
-        }
-      },
-      W = () => {
-        try {
-          window.sessionStorage.removeItem(jo);
-        } catch {
-          return;
-        }
-      },
-      G = () => {
-        ((N.current += 1), H(), (j.current = ``), (M.current = !1), (F.current = null));
-      };
-    ((0, React.useEffect)(() => {
-      V.current = {
-        playTrack: _,
-        playVideo: v,
-        updateTime: y,
-        stopPlayback: b,
-        queueSpotifyResume: S,
-        queueClipSpotifyPlayback: C,
-      };
-    }, [_, v, y, b, S, C]),
-      (0, React.useEffect)(() => {
-        if (!u || !t || !n || k !== `manual`) return;
-        let e = () => {
-          let e = Math.max(0, (c.end - c.start) / 1e3),
-            r = Math.max(0, (Date.now() - c.start) / 1e3),
-            i = e > 0 ? Math.min(r, e) : r;
-          V.current.queueSpotifyResume({
-            track: t,
-            artist: n,
-            startTime: i,
-            videoUrlOrId: o || s,
-          });
-        };
-        e();
-        let r = window.setInterval(e, 250);
-        return () => window.clearInterval(r);
-      }, [t, n, o, s, c.start, c.end, u, k]));
-    let K = async () => {
-      if (!u || !t || !n || k === `manual` || D || O || E) return !1;
-      let e = Math.max(0, Math.floor((Date.now() - c.start) / 1e3));
-      V.current.queueSpotifyResume({
-        track: t,
-        artist: n,
-        startTime: e,
-        videoUrlOrId: o || s,
-      });
-      let r = parseVideoId(o || s || ``);
-      return r && (await V.current.playVideo(r, e, `spotify`))
-        ? !0
-        : V.current.playTrack(t, n, e, `spotify`);
-    };
-    ((0, React.useEffect)(() => {
-      B.current = {
-        playbackSource: k,
-        activeVideoId: A,
-      };
-    }, [k, A]),
-      (0, React.useEffect)(
-        () => () => {
-          ((N.current += 1), H());
-        },
-        [],
-      ),
-      (0, React.useEffect)(() => {
-        if (!d || !t || !n || !u) {
-          h(``);
-          return;
-        }
-        let e = parseVideoId(o || s || ``);
-        if (e) {
-          h(e);
-          return;
-        }
-        let r = !1;
-        return (
-          h(``),
-          resolveTrack(t, n)
-            .then(({videoId}) => {
-              r || h(videoId || ``);
-            })
-            .catch(() => {
-              r || h(``);
-            }),
-          () => {
-            r = !0;
-          }
-        );
-      }, [t, n, o, s, u, d]),
-      (0, React.useEffect)(() => {
-        if (T || !t || !n || !u || k === `manual`) return;
-        let r = [e || ``, t, n].filter(Boolean).join(`::`),
-          i = Math.max(0, Math.floor((Date.now() - c.start) / 1e3));
-        if (D) {
-          ((N.current += 1),
-            H(),
-            (j.current = r),
-            (M.current = !1),
-            V.current.queueClipSpotifyPlayback({
-              track: t,
-              artist: n,
-              startTime: i,
-              videoUrlOrId: o || s,
-            }));
-          return;
-        }
-        if (O) {
-          ((N.current += 1),
-            H(),
-            (j.current = r),
-            (M.current = !1),
-            V.current.queueSpotifyResume({
-              track: t,
-              artist: n,
-              startTime: i,
-              videoUrlOrId: o || s,
-            }));
-          return;
-        }
-        (r !== j.current || (!M.current && k === `none`)) &&
-          (async () => {
-            let e = N.current + 1;
-            ((N.current = e),
-              (M.current = !0),
-              (j.current = r),
-              H(),
-              V.current.queueSpotifyResume({
-                track: t,
-                artist: n,
-                startTime: i,
-                videoUrlOrId: o || s,
-              }));
-            let a = () => {
-                N.current === e && (M.current = !1);
-              },
-              u = () => {
-                if (N.current !== e || j.current !== r) {
-                  a();
-                  return;
-                }
-                V.current
-                  .playTrack(t, n, Math.max(0, Math.floor((Date.now() - c.start) / 1e3)), `spotify`)
-                  .finally(() => {
-                    ((P.current = null), a());
-                  });
-              },
-              d = (t) => {
-                if (t <= 0) {
-                  u();
-                  return;
-                }
-                P.current = window.setTimeout(() => {
-                  if (N.current !== e || j.current !== r) {
-                    ((P.current = null), a());
-                    return;
-                  }
-                  u();
-                }, t);
-              },
-              f = parseVideoId(o || s || ``);
-            if (!f) {
-              d(ko);
-              return;
-            }
-            let p = await V.current.playVideo(f, i, `spotify`);
-            if (N.current !== e || j.current !== r) return;
-            if (p) {
-              a();
-              return;
-            }
-            let m = B.current;
-            if (m.playbackSource === `spotify` && m.activeVideoId === f) {
-              a();
-              return;
-            }
-            d(Ao);
-          })();
-      }, [t, e, n, c.start, o, s, T, u, D, O, k]),
-      (0, React.useEffect)(() => {
-        if (!u || k !== `spotify`) {
-          F.current = null;
-          return;
-        }
-        let e = () => {
-          if (M.current) return;
-          let e = Math.max(0, Math.floor((Date.now() - c.start) / 1e3));
-          F.current !== e && ((F.current = e), V.current.updateTime(e));
-        };
-        e();
-        let t = window.setInterval(() => {
-          e();
-        }, 1e3);
-        return () => {
-          window.clearInterval(t);
-        };
-      }, [c.start, c.end, u, k]),
-      (0, React.useEffect)(() => {
-        !u && k === `spotify` && (G(), V.current.stopPlayback(), W(), L(!1));
-      }, [u, k]),
-      (0, React.useEffect)(() => {
-        let e = () => {
-            (ee.current || (No() && !document.hidden && u && k !== `manual` && !D && !O && !E)) &&
-              ((ee.current = !1),
-              G(),
-              K().then((e) => {
-                L(!e && U());
-              }));
-          },
-          t = () => {
-            if (document.hidden) {
-              ee.current = No() && u && k === `spotify` && E;
-              return;
-            }
-            e();
-          },
-          n = () => {
-            e();
-          };
-        return (
-          document.addEventListener(`visibilitychange`, t),
-          window.addEventListener(`pageshow`, e),
-          window.addEventListener(`focus`, n),
-          () => {
-            (document.removeEventListener(`visibilitychange`, t),
-              window.removeEventListener(`pageshow`, e),
-              window.removeEventListener(`focus`, n));
-          }
-        );
-      }, [t, n, c.start, o, s, E, D, O, u, k]),
-      (0, React.useEffect)(() => {
-        if (!No()) {
-          L(!1);
-          return;
-        }
-        if (!U()) {
-          L(!1);
-          return;
-        }
-        if (E) {
-          (W(), L(!1));
-          return;
-        }
-        let e = !document.hidden && u && !!t && !!n && k !== `manual` && !D && !O;
-        L(e);
-      }, [t, n, E, D, O, u, k]));
-    let te = async () => {
-        R || (z(!0), G(), (await K()) ? (W(), L(!1)) : L(!0), z(!1));
-      },
-      ne = r && /^https:\/\//.test(r) ? r : ``,
-      re = f.shouldDisableHeavyEffects ? `blur(14px) saturate(0.92)` : `blur(22px) saturate(1.06)`,
-      ie = f.shouldDisableHeavyEffects ? 0.28 : 0.46,
-      q = f.shouldDisableHeavyEffects ? 0.28 : 0.18,
-      ae = I
-        ? (0, jsxRuntime.jsx)(
-            motion.div,
-            {
-              className: `pointer-events-none fixed inset-x-0 bottom-5 z-[35] flex justify-center px-4 sm:hidden`,
-              initial: {
-                opacity: 0,
-                y: 18,
-              },
-              animate: {
-                opacity: 1,
-                y: 0,
-              },
-              exit: {
-                opacity: 0,
-                y: 12,
-              },
-              transition: {
-                duration: 0.22,
-                ease: `easeOut`,
-              },
-              children: (0, jsxRuntime.jsx)(motion.button, {
-                type: `button`,
-                onClick: () => {
-                  te();
-                },
-                className: `pointer-events-auto inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-[rgba(12,10,24,0.92)] px-4 py-2 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.34)] backdrop-blur-xl`,
-                whileTap: {
-                  scale: 0.98,
-                },
-                children: R ? `Resuming audio...` : `Tap to resume audio`,
-              }),
-            },
-            `mobile-audio-unlock`,
-          )
-        : null;
-    return d
-      ? (0, jsxRuntime.jsxs)(AnimatePresence, {
-          children: [
-            (0, jsxRuntime.jsxs)(
-              motion.div,
-              {
-                className: `absolute inset-0 z-0`,
-                initial: {
-                  opacity: 0.4,
-                },
-                animate: {
-                  opacity: u ? 0 : 0.4,
-                },
-                transition: {
-                  duration: 0.5,
-                },
-                children: [
-                  (0, jsxRuntime.jsx)(`img`, {
-                    src: `/assets/background.webp`,
-                    alt: ``,
-                    'aria-hidden': `true`,
-                    className: `absolute inset-0 h-full w-full object-cover`,
-                    decoding: `async`,
-                    fetchPriority: `high`,
-                  }),
-                  (0, jsxRuntime.jsx)(`div`, {
-                    className: `absolute inset-0`,
-                    style: {
-                      background: `linear-gradient(to top, var(--background), color-mix(in srgb, var(--background) 50%, transparent), transparent)`,
-                    },
-                  }),
-                ],
-              },
-              `default-background`,
-            ),
-            u &&
-              (0, jsxRuntime.jsx)(
-                motion.div,
-                {
-                  className: `absolute -inset-6 z-[1] bg-cover bg-center`,
-                  style: {
-                    backgroundImage: ne ? `url(${ne})` : `none`,
-                    backgroundSize: `cover`,
-                    backgroundPosition: `center`,
-                    filter: re,
-                    willChange: `transform, opacity`,
-                    backfaceVisibility: `hidden`,
-                    WebkitBackfaceVisibility: `hidden`,
-                  },
-                  transformTemplate: (e, t) => `translateZ(0) ${t}`,
-                  initial: {
-                    opacity: 0,
-                  },
-                  animate: {
-                    opacity: ie + g.overlayOpacity * 0.18,
-                    x: g.translateX * 1.45,
-                    y: g.translateY * 1.28,
-                    scale: g.backgroundScale,
-                    rotate: g.rotate * 0.95,
-                  },
-                  exit: {
-                    opacity: 0,
-                  },
-                  transition: {
-                    duration: q,
-                    ease: `easeOut`,
-                  },
-                  children: (0, jsxRuntime.jsx)(`div`, {
-                    className: `absolute inset-0`,
-                    style: {
-                      background: `linear-gradient(to top, var(--background), color-mix(in srgb, var(--background) 60%, transparent), color-mix(in srgb, var(--background) 30%, transparent))`,
-                    },
-                  }),
-                },
-                `spotify-background`,
-              ),
-            u &&
-              (0, jsxRuntime.jsxs)(
-                motion.div,
-                {
-                  className: `pointer-events-none absolute inset-0 z-[2]`,
-                  style: {
-                    willChange: `transform, opacity`,
-                    backfaceVisibility: `hidden`,
-                    WebkitBackfaceVisibility: `hidden`,
-                  },
-                  transformTemplate: (e, t) => `translateZ(0) ${t}`,
-                  initial: {
-                    opacity: 0,
-                  },
-                  animate: {
-                    opacity: g.overlayOpacity,
-                  },
-                  exit: {
-                    opacity: 0,
-                  },
-                  transition: {
-                    duration: q,
-                    ease: `easeOut`,
-                  },
-                  children: [
-                    (0, jsxRuntime.jsx)(motion.div, {
-                      className: `absolute -inset-[12%]`,
-                      style: {
-                        background: `radial-gradient(circle at 50% 32%, rgba(255,255,255,0.18), rgba(148,163,184,0.07) 28%, transparent 62%)`,
-                        filter: f.shouldDisableHeavyEffects ? `blur(44px)` : `blur(78px)`,
-                        mixBlendMode: `screen`,
-                        willChange: `transform, opacity`,
-                        backfaceVisibility: `hidden`,
-                        WebkitBackfaceVisibility: `hidden`,
-                      },
-                      transformTemplate: (e, t) => `translateZ(0) ${t}`,
-                      animate: {
-                        opacity: g.haloOpacity,
-                        x: g.translateX * 1.45,
-                        y: g.translateY * 1.2,
-                        scale: g.haloScale,
-                      },
-                      transition: {
-                        duration: q,
-                        ease: `easeOut`,
-                      },
-                    }),
-                    (0, jsxRuntime.jsx)(motion.div, {
-                      className: `absolute -inset-[18%]`,
-                      style: {
-                        background: [
-                          `radial-gradient(circle at 50% 48%, rgba(255,255,255,0.22), rgba(255,255,255,0.08) 22%, transparent 56%)`,
-                          `radial-gradient(circle at 80% 18%, rgba(251,191,36,0.16), transparent 34%)`,
-                          `radial-gradient(circle at 18% 82%, rgba(96,165,250,0.14), transparent 36%)`,
-                        ].join(`,`),
-                        filter: f.shouldDisableHeavyEffects ? `blur(28px)` : `blur(52px)`,
-                        mixBlendMode: `screen`,
-                        willChange: `transform, opacity`,
-                        backfaceVisibility: `hidden`,
-                        WebkitBackfaceVisibility: `hidden`,
-                      },
-                      transformTemplate: (e, t) => `translateZ(0) ${t}`,
-                      animate: {
-                        opacity: Mo(g.haloOpacity * 0.92 + g.pulse * 0.14, 0.08, 0.72),
-                        x: g.translateX * 1.85,
-                        y: g.translateY * 1.55,
-                        scale: g.haloScale + g.intensity * 0.08,
-                        rotate: g.rotate * 0.7,
-                      },
-                      transition: {
-                        duration: q,
-                        ease: `easeOut`,
-                      },
-                    }),
-                    (0, jsxRuntime.jsx)(motion.div, {
-                      className: `absolute inset-0`,
-                      style: {
-                        background: `linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.025) 26%, rgba(9,8,18,0.08) 100%)`,
-                        mixBlendMode: `soft-light`,
-                        willChange: `transform, opacity`,
-                        backfaceVisibility: `hidden`,
-                        WebkitBackfaceVisibility: `hidden`,
-                      },
-                      transformTemplate: (e, t) => `translateZ(0) ${t}`,
-                      animate: {
-                        opacity: Mo(g.shimmerOpacity + g.pulse * 0.08, 0.06, 0.42),
-                        scale: 1.01 + g.intensity * 0.024,
-                        x: g.translateX * 0.28,
-                        y: g.translateY * 0.12,
-                      },
-                      transition: {
-                        duration: q,
-                        ease: `easeOut`,
-                      },
-                    }),
-                  ],
-                },
-                `spotify-audio-reactive-overlay`,
-              ),
-            ae,
-          ],
-        })
-      : (0, jsxRuntime.jsx)(AnimatePresence, {
-          children: ae,
-        });
-  };
+    }, 'mobile-audio-unlock') : null,
+  });
+}
 function Fo({
   albumArtUrl: e,
   artist: t,
@@ -9466,20 +8948,7 @@ var MainProfile = () => {
         trackId: O?.track_id,
         videoId: O?.youtube_video_id || O?.youtube_url,
       }),
-      (0, jsxRuntime.jsx)(Po, {
-        trackId: O?.track_id,
-        track: O?.song || ``,
-        artist: O?.artist || ``,
-        albumArt: O?.album_art_url || ``,
-        youtubeVideoId: O?.youtube_video_id || ``,
-        youtubeUrl: O?.youtube_url || ``,
-        timestamps: O?.timestamps || {
-          start: 0,
-          end: 0,
-        },
-        isSpotifyPlaying: !!O,
-        renderVisuals: !1,
-      }),
+      (0, jsxRuntime.jsx)(SpotifyPlaybackNotice, {}),
       (0, jsxRuntime.jsx)(NowPlayingDock, {
         spotify: O,
       }),

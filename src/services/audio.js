@@ -1,4 +1,5 @@
 import { readStored, storeValue } from "./request.js";
+import { createSpotifySync, liveSpotifyTrack } from "./spotify-sync.js";
 import {
   resolveTrack,
   getCachedTrack,
@@ -15,6 +16,7 @@ let state = {
   isAudioDisabled: false,
   isAudioPlaying: false,
   isAudioLoading: false,
+  isAutoplayBlocked: false,
   isClipPlaying: false,
   isPlaybackInterrupted: false,
   isPlayerPrimingReady: true,
@@ -31,7 +33,6 @@ let playerAvailable = false;
 let loadedVideoId;
 let generation = 0;
 let progressTimer;
-let spotifyResume;
 let lastVolume = state.volume || 30;
 let youtubeBlocked = false;
 let engineHost;
@@ -40,11 +41,16 @@ let candidates = [];
 let autoplayWatch;
 let preparedVideoId;
 let preparation = 0;
+let prefetchedSpotifyKey;
 
 export function updateAudioPresence(presence) {
-  const spotify = presence?.listening_to_spotify ? presence.spotify : null;
-  if (spotify?.timestamps?.end > Date.now() && !state.isAudioDisabled)
-    void resolveTrack(spotify.song, spotify.artist).catch(() => {});
+  const spotify = liveSpotifyTrack(presence);
+  if (spotify && spotify.key !== prefetchedSpotifyKey && !state.isAudioDisabled) {
+    prefetchedSpotifyKey = spotify.key;
+    void resolveTrack(spotify.track, spotify.artist).catch(() => {});
+  }
+  if (!spotify) prefetchedSpotifyKey = null;
+  spotifySync.update(presence);
 }
 
 function publish(patch) {
@@ -79,6 +85,7 @@ function setVolume(value) {
   mediaElements.forEach((base, element) => {
     element.volume = (base * volume) / 100;
   });
+  spotifySync.tick();
 }
 
 function removeEmbed() {
@@ -146,11 +153,13 @@ function loadYouTube() {
 }
 
 function resumeOnFailure() {
+  if (state.playbackSource === "spotify") spotifySync.failed();
   clearTimeout(autoplayWatch);
   clearInterval(progressTimer);
   publish({
     isAudioPlaying: false,
     isAudioLoading: false,
+    isAutoplayBlocked: false,
     playbackSource: "none",
     activeVideoId: null,
   });
@@ -198,7 +207,7 @@ async function ensurePlayer() {
                   publish({
                     isAudioPlaying: playing,
                     ...(playing
-                      ? { isAudioLoading: false }
+                      ? { isAudioLoading: false, isAutoplayBlocked: false }
                       : event.data === YT.PlayerState.BUFFERING
                         ? { isAudioLoading: true }
                         : {}),
@@ -212,7 +221,7 @@ async function ensurePlayer() {
                   });
               },
               onAutoplayBlocked: () => {
-                youtubeBlocked = true;
+                markAutoplayBlocked();
               },
               onError: () => {
                 clearTimeout(timer);
@@ -259,8 +268,14 @@ function watchAutoplay(request) {
       !state.isAudioPlaying &&
       state.playbackSource !== "none"
     )
-      youtubeBlocked = true;
+      markAutoplayBlocked();
   }, 3000);
+}
+
+function markAutoplayBlocked() {
+  if (state.playbackSource === "none" || state.isAudioDisabled) return;
+  youtubeBlocked = true;
+  publish({ isAutoplayBlocked: true, isAudioLoading: false });
 }
 
 function retryYoutube() {
@@ -275,8 +290,13 @@ function retryYoutube() {
   )
     return;
   youtubeBlocked = false;
+  publish({ isAutoplayBlocked: false, isAudioLoading: true });
   applyPlayerLevel();
+  const offset = spotifySync.position();
+  if (state.playbackSource === "spotify" && offset !== null)
+    player.seekTo?.(offset, true);
   player.playVideo?.();
+  watchAutoplay(generation);
 }
 
 async function prepareSong(song, { cue = true } = {}) {
@@ -330,6 +350,7 @@ async function playVideo(
     playbackSource: source,
     isAudioLoading: true,
     isAudioPlaying: false,
+    isAutoplayBlocked: false,
   });
   try {
     const yt = playerAvailable ? player : await ensurePlayer();
@@ -401,6 +422,7 @@ async function playTrack(track, artist, startTime = 0, source = "spotify") {
     playbackSource: source,
     isAudioLoading: true,
     isAudioPlaying: false,
+    isAutoplayBlocked: false,
   });
   player?.pauseVideo?.();
   try {
@@ -462,6 +484,7 @@ function stopPlayback({ resumeSpotify = false } = {}) {
     activeVideoId: null,
     isAudioPlaying: false,
     isAudioLoading: false,
+    isAutoplayBlocked: false,
     playbackTime: 0,
     playbackDuration: 0,
   });
@@ -470,13 +493,7 @@ function stopPlayback({ resumeSpotify = false } = {}) {
   } catch {
     /* Keep the engine ready for the next track. */
   }
-  if (resumeSpotify && spotifyResume && !state.isAudioDisabled) {
-    const request = spotifyResume;
-    const offset = request.startTime + (Date.now() - request.at) / 1000;
-    if (request.videoUrlOrId)
-      void playVideo(request.videoUrlOrId, offset, "spotify");
-    else void playTrack(request.track, request.artist, offset, "spotify");
-  }
+  if (resumeSpotify) spotifySync.retry();
 }
 
 function setManualPlaybackDetails(value) {
@@ -498,7 +515,12 @@ const actions = {
     if (state.isAudioDisabled) return false;
     entered = true;
     void ensurePlayer().catch(() => {});
+    spotifySync.retry();
     return true;
+  },
+  retrySpotifyPlayback() {
+    retryYoutube();
+    spotifySync.retry();
   },
   toggleMute() {
     setVolume(state.volume ? 0 : lastVolume);
@@ -506,7 +528,6 @@ const actions = {
   // "Enter without audio": nothing may sound, from any source, and the volume control disappears.
   disableAudioForever() {
     entered = true;
-    spotifyResume = null;
     generation++;
     candidates = [];
     clearTimeout(autoplayWatch);
@@ -516,6 +537,7 @@ const actions = {
       isAudioDisabled: true,
       isAudioPlaying: false,
       isAudioLoading: false,
+      isAutoplayBlocked: false,
       playbackSource: "none",
       activeVideoId: null,
       playbackTime: 0,
@@ -532,6 +554,7 @@ const actions = {
       element.pause();
     });
     if (navigator.mediaSession) navigator.mediaSession.metadata = null;
+    spotifySync.tick();
   },
   updateTime(seconds) {
     if (
@@ -544,27 +567,25 @@ const actions = {
   seekToTime(seconds) {
     player?.seekTo?.(Math.max(0, seconds), true);
   },
-  queueSpotifyResume(request) {
-    spotifyResume = { ...request, at: Date.now() };
-  },
-  queueClipSpotifyPlayback(request) {
-    spotifyResume = { ...request, at: Date.now() };
-  },
   setClipPlaybackActive(active) {
     publish({ isClipPlaying: active });
+    spotifySync.tick();
   },
   finishClipPlayback() {
     publish({ isClipPlaying: false });
+    spotifySync.tick();
   },
   pauseForExternalMedia() {
     publish({ isPlaybackInterrupted: true });
     player?.pauseVideo?.();
     clearTimeout(autoplayWatch);
+    spotifySync.tick();
   },
   resumeAfterExternalMedia() {
     publish({ isPlaybackInterrupted: false });
     if (state.isAudioDisabled) return;
     if (state.playbackSource !== "none") player?.playVideo?.();
+    spotifySync.tick();
   },
   registerMediaElement(element, { baseVolume = 1 } = {}) {
     mediaElements.set(element, clamp(baseVolume, 1));
@@ -573,6 +594,19 @@ const actions = {
     return () => mediaElements.delete(element);
   },
 };
+
+const spotifySync = createSpotifySync({
+  readAudio: () => ({ ...state, entered }),
+  play: (track) => {
+    const offset = Math.max(0, (Date.now() - track.start) / 1000);
+    const id = parseVideoId(track.video);
+    return id
+      ? playVideo(id, offset, "spotify")
+      : playTrack(track.track, track.artist, offset, "spotify");
+  },
+  stop: () => stopPlayback(),
+  syncTime: actions.updateTime,
+});
 
 export function createAudioComponents(React) {
   const subscribe = (listener) => {
@@ -583,9 +617,15 @@ export function createAudioComponents(React) {
     React.useEffect(() => {
       document.addEventListener("click", retryYoutube);
       document.addEventListener("keydown", retryYoutube);
+      document.addEventListener("visibilitychange", spotifySync.tick);
+      window.addEventListener("pageshow", spotifySync.tick);
+      window.addEventListener("online", spotifySync.retry);
       return () => {
         document.removeEventListener("click", retryYoutube);
         document.removeEventListener("keydown", retryYoutube);
+        document.removeEventListener("visibilitychange", spotifySync.tick);
+        window.removeEventListener("pageshow", spotifySync.tick);
+        window.removeEventListener("online", spotifySync.retry);
       };
     }, []);
     return children;
