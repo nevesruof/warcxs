@@ -65,7 +65,7 @@
 .profile-identity-pills {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex: 0 0 auto;
 }
 .profile-clan-pill,
@@ -74,46 +74,45 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 22px;
+  height: 26px;
   border: 0;
-  border-radius: 7px;
-  background: transparent;
+  border-radius: 9px;
+  background: #18181a;
 }
 .profile-clan-pill {
   gap: 4px;
-  min-width: 56px;
+  min-width: 84px;
   padding: 0 8px;
   color: #f2f3f5;
   font:
-    400 14px/1.2 Inter,
+    400 16px/1.2 Inter,
     sans-serif;
   letter-spacing: -0.35px;
   cursor: default;
-  transition:
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    background 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .profile-clan-pill:hover,
 .profile-clan-pill:focus-visible {
   transform: translateY(-2px);
-  background: #ffffff08;
 }
 .profile-clan-icon {
   display: block;
-  width: 15px;
-  height: 15px;
-  object-fit: contain;
-  image-rendering: auto;
+  width: 16px;
+  height: 16px;
+  /* Display the exact sword from the supplied 776 × 192 reference. */
+  background-size: 221.714px 54.857px;
+  background-position: -15.429px -22.857px;
+  background-repeat: no-repeat;
 }
 .profile-badges-pill {
-  gap: 4px;
-  padding: 0 6px;
+  gap: 7px;
+  padding: 0 10px;
 }
 .profile-badge-item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 17px;
+  width: 19px;
   height: 20px;
   margin: 0;
   padding: 0;
@@ -131,15 +130,24 @@
 }
 .profile-badge-icon {
   display: block;
-  width: 17px;
-  height: 17px;
+  width: 19px;
+  height: 19px;
   object-fit: contain;
   filter: none;
 }
-.profile-badge-item[aria-label='Server Booster'] .profile-badge-icon {
+.profile-badge-item[data-badge='booster'] .profile-badge-icon {
   width: 21px;
   height: 21px;
   max-width: none;
+}
+.profile-badge-item[data-badge='hypesquad-bravery'] .profile-badge-icon {
+  width: 25px;
+  height: 25px;
+  max-width: none;
+}
+.profile-badge-item[data-badge='orbs'] .profile-badge-icon {
+  width: 17px;
+  height: 17px;
 }
 @media (prefers-reduced-motion: reduce) {
   html {

@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {historyPayload,presencePayload} from '../lib/activity.js';
+import {historyPayload,presencePayload,readBot} from '../lib/activity.js';
 import {createActivityHistory} from '../src/services/activity-history.js';
 import handler from '../api/game-activity.js';
 const now=Date.now();
-const fixture={discordUserId:'1239908273885286546',discord:{status:'dnd',connected:true,updatedAt:now/1000,
+const fixture={discordUserId:'893966003690668102',discord:{status:'dnd',connected:true,updatedAt:now/1000,
   desktopStatus:'dnd',webStatus:'offline',mobileStatus:'offline',activities:[
     {kind:'playing',type:0,name:'Minecraft',applicationId:'12345',startMs:now-60000},
     {kind:'spotify',name:'Song',artist:'Artist',startMs:now-20000,endMs:now+180000,trackId:'track'}]},
@@ -39,4 +39,26 @@ test('Bot errors are 503, never successful empty history',async()=>{
  const res={setHeader(){},status(code){this.code=code;return this},json(body){this.body=body;return this}};
  try {await handler({method:'GET'},res);assert.equal(res.code,503);assert.equal(res.body.activities,undefined);}
  finally {global.fetch=original;}
+});
+
+test('Switching Discord accounts rejects the previous bot and cached history', async (t) => {
+  const previousId = '1239908273885286546';
+  const previousHistory = {...historyPayload(fixture), userId: previousId};
+  const history = createActivityHistory(
+    async () => Response.json(previousHistory),
+    {getItem: () => JSON.stringify(previousHistory), setItem: () => assert.fail('Old history must not be saved')},
+    () => assert.fail('Old history must not be published'),
+  );
+  assert.deepEqual(history.current().recentActivities, []);
+  await history.refresh(true);
+  assert.deepEqual(history.current().recentActivities, []);
+
+  const previousUrl = process.env.ACTIVITY_BOT_URL;
+  process.env.ACTIVITY_BOT_URL = 'https://bot.example.test/previous-account';
+  t.after(() => {
+    if (previousUrl === undefined) delete process.env.ACTIVITY_BOT_URL;
+    else process.env.ACTIVITY_BOT_URL = previousUrl;
+  });
+  t.mock.method(globalThis, 'fetch', async () => Response.json({...fixture, discordUserId: previousId}));
+  await assert.rejects(readBot(), /Unexpected activity payload/);
 });

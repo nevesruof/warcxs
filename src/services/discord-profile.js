@@ -1,4 +1,5 @@
-export const DISCORD_USER_ID = "1239908273885286546";
+import { DISCORD_USER_ID } from "../config/discord.js";
+export { DISCORD_USER_ID };
 const imageHash = /^(?:a_)?[a-f0-9]{32}$/;
 const profileFields = ["avatar", "banner", "accent_color", "discriminator"];
 

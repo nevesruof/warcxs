@@ -1,0 +1,1 @@
+export const DISCORD_USER_ID = "893966003690668102";

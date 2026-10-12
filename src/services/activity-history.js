@@ -1,7 +1,9 @@
-const KEY = "warcxs-activity-history:v1:1239908273885286546";
+import { DISCORD_USER_ID } from "../config/discord.js";
+
+const KEY = `warcxs-activity-history:v1:${DISCORD_USER_ID}`;
 export function createActivityHistory(fetcher, storage, publish) {
   let state = {
-    userId: "1239908273885286546",
+    userId: DISCORD_USER_ID,
     source: "cache",
     recentActivities: [],
     activities: [],

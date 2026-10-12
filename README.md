@@ -15,6 +15,8 @@ npm run build
 
 ## Integraciones
 
+- Discord sigue al usuario `893966003690668102`. Las cachés de perfil y actividad se separan por usuario. El código del bot está en [`bot/`](bot/README.md); actualiza esos archivos en el hosting y reinicia el bot para que también cambie el emisor de la presencia.
+
 - stats.fm obtiene pistas, artistas y listening clock reales. Los álbumes se solicitan únicamente al abrir su pestaña y usan `orderBy`.
 - Al entrar se reproduce únicamente la pista activa de Spotify, cuando está disponible. Si no hay una pista activa, la página permanece en silencio.
 - El audio en vivo sigue los tiempos de Discord sin depender de los renders de la interfaz. Los fallos temporales de YouTube se reintentan con esperas progresivas; cambiar o terminar la canción cancela el intento anterior. Al detener una pista manual se retoma la canción actualmente activa.

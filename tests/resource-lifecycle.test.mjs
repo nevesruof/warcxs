@@ -104,7 +104,7 @@ test("Unchanged history does not write storage or rerender when only the API tim
   const history = createActivityHistory(
     async () =>
       Response.json({
-        userId: "1239908273885286546",
+        userId: "893966003690668102",
         source: "bot",
         generatedAt: generatedAt++,
         recentActivities: [{ id: "game", name: "Minecraft", lastSeenAt: 1000 }],

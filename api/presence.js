@@ -1,38 +1,29 @@
-import { readBot, presencePayload } from '../lib/activity.js';
+import { readBot, presencePayload, USER_ID } from '../lib/activity.js';
 const STATIC_DISCORD_USER = {
-  avatar: '/assets/itake-avatar.jpeg',
-  avatar_decoration_data: { asset: 'a_1005898c6acf56a9ac5010baf444f6fd', expires_at: null },
-  bot: false,
-  collectibles: {
-    nameplate: {
-      asset: 'nameplates/water_stalker/1516559776023187547/',
-      expires_at: null,
-      label: "Sinister head with glowing white eyes peeks out above the water's surface",
-      palette: 'black',
-      sku_id: '1516559776023187547',
-    },
+  "avatar": "26009e0a7070d0ea156a8ec9f3880e74",
+  "avatar_decoration_data": null,
+  "bot": false,
+  "collectibles": null,
+  "discriminator": "0",
+  "display_name": "Take",
+  "display_name_styles": {
+    "colors": [
+      16777215
+    ],
+    "effect_id": 4,
+    "font_id": 8
   },
-  discriminator: '0',
-  display_name: 'iTake',
-  display_name_styles: { colors: [16777215], effect_id: 4, font_id: 8 },
-  global_name: 'iTake',
-  id: '1239908273885286546',
-  primary_guild: {
-    badge: '878c62b6694a4f5931104f766191bec7',
-    identity_enabled: true,
-    identity_guild_id: '1519060906678554685',
-    tag: 'FM',
+  "global_name": "Take",
+  "id": USER_ID,
+  "public_flags": 64,
+  "username": "warcxss",
+  "vad_colors": null,
+  "clan": {
+    "tag": "LTUS",
+    "icon": "/assets/ltus-reference.jpeg"
   },
-  public_flags: 64,
-  username: 'cheatinformer',
-  vad_colors: null,
-  clan: {
-    badge: '878c62b6694a4f5931104f766191bec7',
-    identity_enabled: true,
-    identity_guild_id: '1519060906678554685',
-    tag: 'FM',
-  },
-  banner: '/assets/katana-banner.png',
+  "banner": null,
+  "accent_color": 0
 };
 
 export default async function handler(req, res) {

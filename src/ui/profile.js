@@ -1,5 +1,6 @@
 import {parseVideoId, resolveTrack, prefetchTracks} from '../services/playback-cache.js';
 import { discordAvatarUrl, discordBannerUrl } from '../services/discord-profile.js';
+import { DISCORD_USER_ID } from '../config/discord.js';
 import { observeTooltipPosition } from './tooltip-position.js';
 import { createScrollArea } from './scroll-area.js';
 import { startBackgroundRefresh } from '../services/background-refresh.js';
@@ -1042,7 +1043,7 @@ var ve = n(e()),
       x = n.avatar_decoration_data?.asset || t?.user.avatar_decoration_data?.asset,
       S = `/assets/spirit-embers.png`,
       C = t?.user.clan || n.clan,
-      T = C ? `/assets/clan-skull.svg` : null,
+      T = C?.icon,
       E = t?.user.display_name_styles || n.display_name_styles,
       D = (0, React.useMemo)(() => (E ? _e(E) : null), [E]),
       k = t?.user.bio || t?.user_profile?.bio || null,
@@ -1423,11 +1424,10 @@ var ve = n(e()),
                               className: `profile-clan-pill`,
                               'aria-label': `Server tag ${C.tag}`,
                               children: [
-                                (0, jsxRuntime.jsx)(`img`, {
-                                  src: T,
-                                  alt: ``,
+                                (0, jsxRuntime.jsx)(`span`, {
+                                  style: { backgroundImage: `url("${T}")` },
+                                  'aria-hidden': true,
                                   className: `profile-clan-icon`,
-                                  decoding: `async`,
                                 }),
                                 (0, jsxRuntime.jsx)(`span`, {
                                   children: C.tag,
@@ -1448,6 +1448,7 @@ var ve = n(e()),
                                   children: (0, jsxRuntime.jsx)(`button`, {
                                     type: `button`,
                                     className: `profile-badge-item`,
+                                    'data-badge': e.id,
                                     'aria-label': e.description,
                                     children: (0, jsxRuntime.jsx)(`img`, {
                                       src: de(e.icon),
@@ -8679,7 +8680,7 @@ var ss = () =>
       name: `Discord`,
       handle: `@cheatinformer`,
       icon: `/assets/discord-mark.png`,
-      url: `https://discord.com/users/1239908273885286546`,
+      url: `https://discord.com/users/${DISCORD_USER_ID}`,
       accent: `#5865F2`,
     },
     {

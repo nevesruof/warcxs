@@ -1,6 +1,7 @@
 import { storeValue } from "./request.js";
+import { DISCORD_USER_ID } from "../config/discord.js";
 
-const SNAPSHOT_CACHE = "cheatinformer-site-snapshot";
+export const SNAPSHOT_CACHE = `warcxs-site-snapshot:${DISCORD_USER_ID}`;
 let latest;
 let timer;
 

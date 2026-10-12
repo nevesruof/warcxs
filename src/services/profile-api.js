@@ -4,12 +4,12 @@ import { nativeFetch, requestJson, readStored, storeValue } from "./request.js";
 import { loadAvatar3d } from "./roblox-avatar.js";
 import { updateAudioPresence } from "./audio.js";
 import { prefetchTracks } from "./playback-cache.js";
-import { createProfileTracker } from "./discord-profile.js";
+import { createProfileTracker, DISCORD_USER_ID } from "./discord-profile.js";
 import { saveSnapshot } from "./snapshot-storage.js";
 import { startBackgroundRefresh } from "./background-refresh.js";
 
 const MUSIC_CACHE = "statsfm-recent-v2";
-const PROFILE_CACHE = "warcxs:discord-profile:v1";
+const PROFILE_CACHE = `warcxs:discord-profile:v1:${DISCORD_USER_ID}`;
 const ROBLOX_CACHE = "warcxs:last-roblox-game:zahidtql12";
 const statsfm = createStatsfm(nativeFetch);
 let data;

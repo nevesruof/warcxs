@@ -1,5 +1,5 @@
 import { createAudioComponents } from '../services/audio.js';
-import { saveSnapshot } from '../services/snapshot-storage.js';
+import { saveSnapshot, SNAPSHOT_CACHE } from '../services/snapshot-storage.js';
 import { discordAvatarUrl } from '../services/discord-profile.js';
 import { profileFetch as fetch, currentProfile } from '../services/profile-api.js';
 var e = Object.create,
@@ -16816,7 +16816,7 @@ function Af(e, t = Date.now(), n = 15e3) {
   return !kf(e) || !e?.spotify ? !1 : Number(e.spotify.timestamps?.end || 0) > t - n;
 }
 var jf = `/.netlify/functions/getSiteSnapshot`,
-  Mf = `cheatinformer-site-snapshot`,
+  Mf = SNAPSHOT_CACHE,
   Nf = 1500,
   Pf = 2e4,
   Ff = 6e4,
