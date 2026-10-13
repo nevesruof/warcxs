@@ -4,19 +4,32 @@ import sqlite3
 import time
 from pathlib import Path
 
+# A session that ended less than this many seconds ago is reopened instead of
+# duplicated. Gateway reconnects and transient Roblox failures close sessions
+# for a moment; without this window every blip split one session in two.
+REOPEN_WINDOW = 120
+RETENTION_DAYS = 90
+
 class Recorder:
     def __init__(self, path):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(path)
         self.db.row_factory = sqlite3.Row
         self.db.execute('PRAGMA journal_mode=WAL')
-        self.db.execute('PRAGMA synchronous=FULL')
+        # WAL + NORMAL cannot corrupt the file; at worst the last commit is lost
+        # on power failure, which is fine for activity history and avoids an
+        # fsync on every presence update.
+        self.db.execute('PRAGMA synchronous=NORMAL')
         self.db.execute('PRAGMA busy_timeout=5000')
         self.db.execute('''CREATE TABLE IF NOT EXISTS sessions (
             id INTEGER PRIMARY KEY, provider TEXT, item_key TEXT,
             payload TEXT, first_seen REAL, last_seen REAL, active INTEGER)''')
+        # observe() filters by provider+active; history() orders by last_seen.
+        self.db.execute('CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(provider, active)')
+        self.db.execute('CREATE INDEX IF NOT EXISTS idx_sessions_seen ON sessions(provider, last_seen DESC)')
         self.db.execute('UPDATE sessions SET active=0')
         self.db.commit()
+        self.prune()
 
     def observe(self, provider, items, now=None):
         now = time.time() if now is None else now
@@ -28,11 +41,25 @@ class Recorder:
             if previous:
                 self.db.execute('UPDATE sessions SET payload=?,last_seen=? WHERE id=?',
                                 (raw, now, previous['id']))
+                continue
+            recent = self.db.execute(
+                'SELECT id FROM sessions WHERE provider=? AND item_key=? AND active=0 '
+                'AND last_seen>=? ORDER BY last_seen DESC LIMIT 1',
+                (provider, key, now - REOPEN_WINDOW)).fetchone()
+            if recent:
+                self.db.execute('UPDATE sessions SET payload=?,last_seen=?,active=1 WHERE id=?',
+                                (raw, now, recent['id']))
             else:
                 self.db.execute('INSERT INTO sessions VALUES(NULL,?,?,?,?,?,1)',
                                 (provider, key, raw, now, now))
         for row in existing.values():
             self.db.execute('UPDATE sessions SET active=0 WHERE id=?', (row['id'],))
+        self.db.commit()
+
+    def prune(self, days=RETENTION_DAYS):
+        """Drop finished sessions older than `days`; the table never shrinks otherwise."""
+        cutoff = time.time() - days * 86400
+        self.db.execute('DELETE FROM sessions WHERE active=0 AND last_seen<?', (cutoff,))
         self.db.commit()
 
     def history(self, provider, limit=100, kind=None, exclude_kind=None):

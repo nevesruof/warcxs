@@ -1,13 +1,16 @@
-import { cached, endpoint, fetchJson, requiredText } from '../lib/http.js';
+import { cached, endpoint, fetchJson, rateLimit, requiredText } from '../lib/http.js';
 
 export default endpoint(
-  async (params) => {
+  async (params, req) => {
     const track = requiredText(params, 'track');
     const artist = requiredText(params, 'artist');
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey) return { videoIds: [], available: false, reason: 'youtube-not-configured' };
 
     return cached(`youtube:${track}:${artist}`, 6 * 60 * 60 * 1000, async () => {
+      // Every distinct search costs 100 YouTube quota units (10,000/day by
+      // default), so unique lookups are limited per client. Cache hits are free.
+      rateLimit(req, 'playback', 30);
       const query = new URLSearchParams({
         key: apiKey,
         part: 'snippet',

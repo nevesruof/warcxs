@@ -60,7 +60,8 @@ async function discordAppName(applicationId) {
 
 async function searchIgdb(name) {
   const { token, clientId } = await igdbAuth();
-  const query = `search "${name.replace(/"/g, '\\"')}";
+  // Escape the backslash too, otherwise a name ending in "\" would escape the closing quote.
+  const query = `search "${name.replace(/[\\"]/g, '\\$&')}";
     fields name,slug,summary,storyline,first_release_date,rating,aggregated_rating,total_rating,
       genres.name,themes.name,game_modes.name,player_perspectives.name,
       platforms.name,platforms.abbreviation,

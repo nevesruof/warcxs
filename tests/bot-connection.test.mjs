@@ -51,7 +51,7 @@ function fixture() {
 }
 
 test('Existing bot powers presence and history without environment configuration', async (t) => {
-  configure(t, undefined, 'unused-token');
+  configure(t, undefined, undefined);
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     calls.push({ url, options });
@@ -71,6 +71,16 @@ test('Existing bot powers presence and history without environment configuration
   process.env.ACTIVITY_BOT_URL = '  ';
   await readBot();
   assert.equal(calls.length, 1, 'An empty override must still use the existing bot');
+});
+
+test('A configured token is sent even when the default bot URL is used', async (t) => {
+  configure(t, undefined, 'default-url-token');
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, 'http://fi10.bot-hosting.cloud:26022/api/activity');
+    assert.equal(options.headers.Authorization, 'Bearer default-url-token');
+    return Response.json(fixture());
+  });
+  assert.equal((await readBot()).discordUserId, USER_ID);
 });
 
 test('An explicit bot override and token take precedence over the default', async (t) => {

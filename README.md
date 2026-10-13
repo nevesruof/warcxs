@@ -13,6 +13,12 @@ npm run build
 
 `npm run build` crea `dist/` y comprueba los recursos locales y la sintaxis. `dist/` es generado y no se versiona.
 
+## Caché y límites
+
+Las rutas en vivo (`/api/presence`, `/api/game-activity`) se cachean en el CDN 5 s con `stale-while-revalidate` (`LIVE_CACHE` en `lib/http.js`), y `/api/roblox` y `/api/profile` unos segundos más: muchos visitantes comparten una sola consulta al bot. Los errores nunca se cachean. `/api/playback`, `/api/lyrics` y `/api/roblox?universeId=` limitan las búsquedas distintas por cliente (30/min, en memoria por instancia); para un tope global usa el rate limiting de Vercel. Con la cuota por defecto de YouTube (10 000 unidades/día) caben unas 100 búsquedas al día.
+
+`vercel.json` añade cabeceras de seguridad y una CSP en modo `Report-Only`: abre el sitio con la consola abierta, revisa que no aparezcan avisos y entonces renombra la cabecera a `Content-Security-Policy`.
+
 ## Integraciones
 
 - Discord sigue al usuario `893966003690668102`. Las cachés de perfil y actividad se separan por usuario. El código del bot está en [`bot/`](bot/README.md); actualiza esos archivos en el hosting y reinicia el bot para que también cambie el emisor de la presencia.
@@ -36,7 +42,7 @@ Parte de `.env.example` y configura las variables en Vercel o en tu entorno de s
 | Variable | Uso |
 | --- | --- |
 | `ACTIVITY_BOT_URL` | Opcional: reemplaza `http://fi10.bot-hosting.cloud:26022/api/activity`. Si está configurada en Vercel, actualízala también al cambiar de servidor. |
-| `ACTIVITY_BOT_TOKEN` | Token opcional para ese bot. |
+| `ACTIVITY_BOT_TOKEN` | Debe coincidir con `API_TOKEN` del bot. Se envía siempre que esté definido, también con la URL por defecto. Úsalo con una URL `https://`. |
 | `DISCORD_BOT_TOKEN` | Token de un bot de Discord para actualizar foto y banner directamente cada minuto. Se mantiene únicamente en el servidor. |
 | `YOUTUBE_API_KEY` | Habilita audio sincronizado dentro de la página. |
 | `IGDB_CLIENT_ID` / `IGDB_CLIENT_SECRET` | Opcionales: amplían las fichas de juegos con datos de IGDB. |

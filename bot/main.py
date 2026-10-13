@@ -36,6 +36,9 @@ class Tracker(discord.Client):
         self.live = {'status': 'unknown', 'activities': [], 'updatedAt': None}
         self.roblox = {'username': ROBLOX_USER, 'status': 'unknown', 'updatedAt': None}
         self.observed = {}
+        # Activities seen just before a disconnect, so a gateway blip does not
+        # reset the start time of games that carry no Discord timestamps.
+        self.stale = ({}, 0.0)
         self.target_guild = None
 
     def capture(self, member):
@@ -63,7 +66,8 @@ class Tracker(discord.Client):
                         'largeText': getattr(activity, 'large_image_text', None),
                         'applicationId': str(application_id) if application_id else None}
             # Games without Discord timestamps still keep a stable start time.
-            previous = self.observed.get(key, {})
+            stale, stale_at = self.stale
+            previous = self.observed.get(key) or (stale.get(key, {}) if now - stale_at < 120 else {})
             item.update(key=key, startMs=start_ms or previous.get('startMs') or int(now*1000), endMs=end_ms)
             items[key] = item
         self.observed = items
@@ -101,6 +105,7 @@ class Tracker(discord.Client):
 
     async def on_disconnect(self):
         self.db.observe(DISCORD_HISTORY, {})
+        self.stale = (self.observed, time.time())
         self.observed = {}
         self.live['status'] = 'unknown'
         self.live['activities'] = []
@@ -115,8 +120,12 @@ class Tracker(discord.Client):
             self.live = {'status': 'unknown', 'activities': [], 'updatedAt': time.time()}
 
     async def heartbeat(self):
+        ticks = 0
         while True:
             await asyncio.sleep(60)
+            ticks += 1
+            if ticks % 1440 == 0:  # once a day
+                self.db.prune()
             if self.is_ready() and self.target_guild is not None:
                 self.db.observe(DISCORD_HISTORY, {k:v for k,v in self.observed.items() if v['type'] != 4})
                 self.db.observe(STATUS_HISTORY, {self.live['status']:{'name':self.live['status']}})
@@ -190,7 +199,8 @@ def create_app(bot):
         if request.method == 'OPTIONS':
             response = web.Response(status=204)
         elif request.path != '/health' and token and not hmac.compare_digest(
-                request.headers.get('Authorization', ''), 'Bearer ' + token):
+                # Bytes: compare_digest raises TypeError on non-ASCII str headers.
+                request.headers.get('Authorization', '').encode(), ('Bearer ' + token).encode()):
             response = web.json_response({'error': 'unauthorized'}, status=401)
         else:
             response = await handler(request)
@@ -205,15 +215,23 @@ def create_app(bot):
     async def health(request):
         return web.json_response({'ok': True, 'discordConnected': bot.is_ready()})
 
+    snapshot_cache = {'at': 0.0, 'body': None}
+
     async def snapshot(request):
-        roblox_history = bot.db.history('roblox')
-        return web.json_response({'discordUserId': str(USER_ID),
-            'discord': dict(bot.live, connected=bot.is_ready()),
-            'recentActivities': bot.db.history(DISCORD_HISTORY, limit=100, exclude_kind='spotify'),
-            'recentSongs': bot.db.history(DISCORD_HISTORY, limit=100, kind='spotify'),
-            'recentStatuses': bot.db.history(STATUS_HISTORY, limit=100),
-            'roblox': dict(bot.roblox, lastPlayed=roblox_history[0] if roblox_history else None),
-            'recentRobloxGames': roblox_history, 'generatedAt': time.time()})
+        # Several Vercel instances may poll at once; build the payload (4 SQLite
+        # queries) at most once every 5 seconds.
+        now = time.time()
+        if snapshot_cache['body'] is None or now - snapshot_cache['at'] > 5:
+            roblox_history = bot.db.history('roblox')
+            snapshot_cache['body'] = {'discordUserId': str(USER_ID),
+                'discord': dict(bot.live, connected=bot.is_ready()),
+                'recentActivities': bot.db.history(DISCORD_HISTORY, limit=100, exclude_kind='spotify'),
+                'recentSongs': bot.db.history(DISCORD_HISTORY, limit=100, kind='spotify'),
+                'recentStatuses': bot.db.history(STATUS_HISTORY, limit=100),
+                'roblox': dict(bot.roblox, lastPlayed=roblox_history[0] if roblox_history else None),
+                'recentRobloxGames': roblox_history, 'generatedAt': now}
+            snapshot_cache['at'] = now
+        return web.json_response(snapshot_cache['body'])
 
     app = web.Application(middlewares=[access])
     app.router.add_get('/health', health)

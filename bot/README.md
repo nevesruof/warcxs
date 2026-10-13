@@ -7,3 +7,10 @@ El usuario seguido se configura únicamente en `config.json`: `89396600369066810
 Se conserva el puerto configurado (`PORT=26022`), el token y el historial existente. Las actividades, canciones y estados nuevos se guardan por ID de usuario para no mezclar cuentas. Roblox sigue consultando `zahidtql12`.
 
 La web espera este mismo ID; la actividad nueva aparecerá después de actualizar y reiniciar el bot. El repositorio no contiene credenciales.
+
+## Seguridad de la API
+
+- Define `API_TOKEN` en el `.env` del bot. Sin él, `/api/activity` es público y cualquiera puede leer tu historial de juegos, canciones y estados.
+- En Vercel define `ACTIVITY_BOT_TOKEN` con el mismo valor. Se envía siempre que exista, también con la URL por defecto.
+- El puerto sirve HTTP plano: pon HTTPS delante (por ejemplo Cloudflare Tunnel o un proxy inverso) y apunta `ACTIVITY_BOT_URL` a esa URL `https://`, para que el token no viaje en claro.
+- Una sesión que se corta menos de 120 s (reconexión del gateway, fallo de Roblox) se reabre en vez de duplicarse. Las sesiones terminadas hace más de 90 días se borran una vez al día.
