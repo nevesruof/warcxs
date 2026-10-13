@@ -1,8 +1,12 @@
 import { readBot, historyPayload } from '../lib/activity.js';
 import { activityArt } from '../lib/game-art.js';
+import { LIVE_CACHE } from '../lib/http.js';
 export default async function handler(req, res) {
-  res.setHeader('Cache-Control', 'no-store');
-  if (req.method && req.method !== 'GET') return res.status(405).json({ error: 'GET only' });
+  res.setHeader('Cache-Control', LIVE_CACHE);
+  if (req.method && req.method !== 'GET') {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(405).json({ error: 'GET only' });
+  }
   try {
     const payload = historyPayload(await readBot());
     for (let offset = 0; offset < Math.min(20, payload.recentActivities.length); offset += 5) {
@@ -18,6 +22,7 @@ export default async function handler(req, res) {
     }));
     return res.status(200).json(payload);
   } catch {
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(503).json({ error: 'Activity history temporarily unavailable' });
   }
 }

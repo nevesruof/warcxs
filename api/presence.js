@@ -1,4 +1,5 @@
 import { readBot, presencePayload, USER_ID } from '../lib/activity.js';
+import { LIVE_CACHE } from '../lib/http.js';
 const STATIC_DISCORD_USER = {
   "avatar": "26009e0a7070d0ea156a8ec9f3880e74",
   "avatar_decoration_data": null,
@@ -27,11 +28,15 @@ const STATIC_DISCORD_USER = {
 };
 
 export default async function handler(req, res) {
-  res.setHeader('Cache-Control', 'no-store');
-  if (req.method && req.method !== 'GET') return res.status(405).json({ success: false });
+  res.setHeader('Cache-Control', LIVE_CACHE);
+  if (req.method && req.method !== 'GET') {
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(405).json({ success: false });
+  }
   try {
     return res.status(200).json(presencePayload(await readBot(), STATIC_DISCORD_USER));
   } catch {
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(503).json({ success: false, error: 'Activity bot temporarily unavailable' });
   }
 }

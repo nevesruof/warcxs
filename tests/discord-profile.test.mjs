@@ -142,7 +142,10 @@ test("Profile API keeps bot credentials on the server, whitelists fields and sha
   ]);
   assert.equal(calls, 1);
   assert.equal(a.code, 200);
-  assert.equal(a.headers["Cache-Control"], "no-store");
+  assert.equal(
+    a.headers["Cache-Control"],
+    "public, s-maxage=30, stale-while-revalidate=60",
+  );
   assert.equal(a.body.refreshAfterMs, 60000);
   assert.deepEqual(a.body.user, user);
   assert.equal(a.body.user.secret, undefined);

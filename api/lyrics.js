@@ -1,4 +1,4 @@
-import { cached, endpoint, fetchJson, requiredText } from '../lib/http.js';
+import { cached, endpoint, fetchJson, rateLimit, requiredText } from '../lib/http.js';
 
 export function normalizeLyrics(record, track, artist) {
   return {
@@ -17,7 +17,7 @@ export function normalizeLyrics(record, track, artist) {
 }
 
 export default endpoint(
-  async (params) => {
+  async (params, req) => {
     const track = requiredText(params, 'track');
     const artist = requiredText(params, 'artist');
     const duration = Number(params.get('duration'));
@@ -26,6 +26,7 @@ export default endpoint(
     if (duration > 0 && duration < 86400) query.set('duration', String(duration));
 
     return cached(`lyrics:${query}`, 60 * 60 * 1000, async () => {
+      rateLimit(req, 'lyrics', 30); // only unique lookups reach LRCLIB
       let record;
       try {
         record = await fetchJson(`https://lrclib.net/api/get?${query}`);
