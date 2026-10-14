@@ -5,6 +5,7 @@ import { observeTooltipPosition } from './tooltip-position.js';
 import { createScrollArea } from './scroll-area.js';
 import { startBackgroundRefresh } from '../services/background-refresh.js';
 import {createRecentSongs} from './recent-songs.js';
+import {ProjectCarousel} from './projects-carousel.js';
 import {Radio as K, Pause as W, Play as G, Headphones as R, Expand as H} from './music-icons.js';
 import {playbackSong, isSelectedSong, statsTrackKey, SONG_AUDIO_FIELDS} from '../services/music-playback.js';
 
@@ -1042,7 +1043,7 @@ var ve = n(e()),
       y = discordAvatarUrl(t?.user || n),
       b = discordBannerUrl(t?.user || n),
       x = n.avatar_decoration_data?.asset || t?.user.avatar_decoration_data?.asset,
-      S = `/assets/spirit-embers.png`,
+      S = `/assets/spirit-embers.webp`,
       C = t?.user.clan || n.clan,
       T = C?.icon,
       E = t?.user.display_name_styles || n.display_name_styles,
@@ -6125,52 +6126,6 @@ var ContributionTooltip = ({ day: e, children: t }) => {
       })
     );
   },
-  GithubCard = () =>
-    (0, jsxRuntime.jsxs)(`article`, {
-      className: `fumoware-promo`,
-      'aria-label': `Artifact X current project`,
-      children: [
-        (0, jsxRuntime.jsx)(`img`, {
-          className: `fumoware-promo__logo`,
-          src: `/assets/artifact-logo.png`,
-          alt: `Artifact X`,
-          width: 80,
-          height: 80,
-          loading: `lazy`,
-          decoding: `async`,
-        }),
-        (0, jsxRuntime.jsxs)(`div`, {
-          className: `fumoware-promo__copy`,
-          children: [
-            (0, jsxRuntime.jsx)(`p`, {
-              className: `fumoware-promo__eyebrow`,
-              children: `Current Project`,
-            }),
-            (0, jsxRuntime.jsx)(`p`, {
-              className: `fumoware-promo__title`,
-              children: `Artifact X`,
-            }),
-            (0, jsxRuntime.jsx)(`p`, {
-              className: `fumoware-promo__blurb`,
-              children: `An all-in-one ScreenShare tool equipped with the commonly used tools.`,
-            }),
-            (0, jsxRuntime.jsxs)(`a`, {
-              className: `fumoware-promo__link`,
-              href: `https://github.com/iTakeDev/Artifact-X/releases/tag/ScreenShare`,
-              target: `_blank`,
-              rel: `noopener noreferrer`,
-              onClick: (e) => e.stopPropagation(),
-              children: [
-                `open on github`,
-                (0, jsxRuntime.jsx)(P, {
-                  className: `h-3 w-3`,
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    }),
   vi = [
     {
       preferred: [`Rainbow Six Siege`],
@@ -6805,17 +6760,23 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
       ],
     });
   },
-  Yi = ({ label: e }) =>
+  Yi = ({ label: e, hint: t }) =>
     (0, jsxRuntime.jsxs)(`div`, {
-      className: `flex min-h-[120px] flex-col items-center justify-center rounded-xl border border-purple-400/[0.08] bg-black/10 text-purple-400/30`,
+      className: `empty-panel`,
       children: [
         (0, jsxRuntime.jsx)(M, {
-          className: `mb-3 h-6 w-6 opacity-40`,
+          className: `empty-panel__icon`,
         }),
         (0, jsxRuntime.jsx)(`p`, {
-          className: `text-sm`,
+          className: `empty-panel__label`,
           children: e,
         }),
+        t
+          ? (0, jsxRuntime.jsx)(`p`, {
+              className: `empty-panel__hint`,
+              children: t,
+            })
+          : null,
       ],
     }),
   RecentActivity = ({ userData: e, robloxProfile: t }) => {
@@ -6979,9 +6940,10 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
                       })
                     : (0, jsxRuntime.jsx)(Yi, {
                         label: `No live activity right now`,
+                        hint: `When something is playing or running, it shows up here.`,
                       }),
               }),
-              (0, jsxRuntime.jsx)(GithubCard, {}),
+              (0, jsxRuntime.jsx)(ProjectCarousel, {}),
             ],
           }),
         }),
@@ -7022,6 +6984,7 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
                       })
                     : (0, jsxRuntime.jsx)(Yi, {
                         label: `No recent activity to show`,
+                        hint: `Games and apps appear here after they've been tracked.`,
                       }),
               }),
               (0, jsxRuntime.jsx)(`div`, {
