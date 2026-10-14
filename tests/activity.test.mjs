@@ -62,3 +62,23 @@ test('Switching Discord accounts rejects the previous bot and cached history', a
   t.mock.method(globalThis, 'fetch', async () => Response.json({...fixture, discordUserId: previousId}));
   await assert.rejects(readBot(), /Unexpected activity payload/);
 });
+
+test('Offline presence exposes when the account was last online', () => {
+  const t = Date.now() / 1000;
+  const offline = {
+    ...fixture,
+    discord: { ...fixture.discord, status: 'offline', activities: [], updatedAt: t },
+    recentStatuses: [
+      { sessionId: 9, name: 'offline', firstSeen: t - 600, lastSeen: t },
+      { sessionId: 8, name: 'idle', firstSeen: t - 4000, lastSeen: t - 3600 },
+      { sessionId: 7, name: 'online', firstSeen: t - 9000, lastSeen: t - 7200 },
+    ],
+  };
+  const p = presencePayload(offline, {}).data;
+  assert.equal(p.discord_status, 'offline');
+  assert.equal(p.last_online_at, Math.round((t - 3600) * 1000));
+  // Never exposed while online, while the status is unknown, or by an older bot.
+  assert.equal(presencePayload({ ...offline, discord: { ...offline.discord, status: 'online' } }, {}).data.last_online_at, null);
+  assert.equal(presencePayload({ ...offline, discord: { ...offline.discord, connected: false } }, {}).data.last_online_at, null);
+  assert.equal(presencePayload({ ...offline, recentStatuses: undefined }, {}).data.last_online_at, null);
+});
