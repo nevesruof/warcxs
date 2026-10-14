@@ -19,6 +19,10 @@ Las rutas en vivo (`/api/presence`, `/api/game-activity`) se cachean en el CDN 5
 
 `vercel.json` añade cabeceras de seguridad y una CSP en modo `Report-Only`: abre el sitio con la consola abierta, revisa que no aparezcan avisos y entonces renombra la cabecera a `Content-Security-Policy`.
 
+## Tarjeta de proyectos
+
+La tarjeta con barra de progreso (proyectos, comunidades de Discord y el aviso) se edita en `src/config/projects.js`: cada slide es un objeto con `eyebrow`, `title`, `blurb`, `logo` o `monogram` y un `link` opcional (solo `https`). Para agregar una comunidad, añade otro objeto; la duración por slide es `SLIDE_DURATION_MS`. Se puede deslizar con mouse/dedo, con las flechas del teclado o tocando la barra, y se pausa al pasar el cursor o enfocarla.
+
 ## Integraciones
 
 - Discord sigue al usuario `893966003690668102`. Las cachés de perfil y actividad se separan por usuario. El código del bot está en [`bot/`](bot/README.md); actualiza esos archivos en el hosting y reinicia el bot para que también cambie el emisor de la presencia.

@@ -4267,7 +4267,7 @@ input[type='range']::-moz-range-track {
 .live-rail__activity > div:last-child {
   min-height: 0;
 }
-.fumoware-promo {
+.project-carousel {
   border: 1px solid rgb(var(--ink-surface) / 0.82);
   background: rgb(var(--ink-base) / 0.92);
   width: 100%;
@@ -4276,22 +4276,15 @@ input[type='range']::-moz-range-track {
   color: inherit;
   border-radius: 10px;
   flex: none;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 0.95rem;
-  text-decoration: none;
-  transition:
-    border-color 0.16s,
-    background-color 0.16s,
-    transform 0.16s;
-  display: flex;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.16s;
 }
-.fumoware-promo:hover {
+.project-carousel:hover,
+.project-carousel:focus-visible {
   border-color: rgb(var(--ink-surface));
-  background: rgb(var(--ink-base) / 0.96);
-  transform: translateY(-1px);
 }
 .fumoware-promo__logo {
   -o-object-fit: contain;
@@ -4344,7 +4337,8 @@ input[type='range']::-moz-range-track {
   font-weight: 600;
   display: inline-flex;
 }
-.fumoware-promo:hover .fumoware-promo__link {
+.fumoware-promo__link:hover,
+.fumoware-promo__link:focus-visible {
   color: rgb(var(--ink-text));
 }
 @media (width<=1099px) {
@@ -4356,7 +4350,7 @@ input[type='range']::-moz-range-track {
     flex: none;
     overflow: visible;
   }
-  .fumoware-promo {
+  .project-carousel {
     height: auto;
     min-height: 0;
   }
