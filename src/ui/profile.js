@@ -1222,7 +1222,7 @@ var ve = n(e()),
                   },
                   children: [
                     (0, jsxRuntime.jsx)(`div`, {
-                      className: `absolute inset-0 rounded-full`,
+                      className: `absolute top-1/2 left-1/2 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full sm:h-[90px] sm:w-[90px]`,
                       style: L,
                       children: (0, jsxRuntime.jsx)(motion.img, {
                         src: y,
@@ -1238,8 +1238,8 @@ var ve = n(e()),
                     (0, jsxRuntime.jsx)(`div`, {
                       className: `absolute z-30 flex h-6 w-6 items-center justify-center overflow-hidden rounded-full pointer-events-none`,
                       style: {
-                        bottom: `4px`,
-                        right: `4px`,
+                        bottom: `8px`,
+                        right: `10px`,
                         border: `4px solid rgb(var(--glass-base) / 0.94)`,
                         filter: `drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35))`,
                       },
