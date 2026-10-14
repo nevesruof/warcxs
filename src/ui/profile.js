@@ -1043,7 +1043,6 @@ var ve = n(e()),
       y = discordAvatarUrl(t?.user || n),
       b = discordBannerUrl(t?.user || n),
       x = n.avatar_decoration_data?.asset || t?.user.avatar_decoration_data?.asset,
-      S = `/assets/spirit-embers.webp`,
       C = t?.user.clan || n.clan,
       T = C?.icon,
       E = t?.user.display_name_styles || n.display_name_styles,
@@ -1223,7 +1222,7 @@ var ve = n(e()),
                   },
                   children: [
                     (0, jsxRuntime.jsx)(`div`, {
-                      className: `absolute top-1/2 left-1/2 h-[84px] w-[84px] -translate-x-1/2 -translate-y-1/2 rounded-full sm:h-[90px] sm:w-[90px]`,
+                      className: `absolute inset-0 rounded-full`,
                       style: L,
                       children: (0, jsxRuntime.jsx)(motion.img, {
                         src: y,
@@ -1236,18 +1235,11 @@ var ve = n(e()),
                         fetchPriority: `high`,
                       }),
                     }),
-                    S &&
-                      (0, jsxRuntime.jsx)(`img`, {
-                        src: S,
-                        alt: `Spirit Embers`,
-                        className: `absolute inset-0 w-full h-full pointer-events-none z-10 object-contain`,
-                        decoding: `async`,
-                      }),
                     (0, jsxRuntime.jsx)(`div`, {
                       className: `absolute z-30 flex h-6 w-6 items-center justify-center overflow-hidden rounded-full pointer-events-none`,
                       style: {
-                        bottom: `8px`,
-                        right: `10px`,
+                        bottom: `4px`,
+                        right: `4px`,
                         border: `4px solid rgb(var(--glass-base) / 0.94)`,
                         filter: `drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35))`,
                       },

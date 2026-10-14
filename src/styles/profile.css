@@ -471,8 +471,8 @@ html {
 .profile-last-active {
   position: absolute;
   z-index: 30;
-  bottom: 10px;
-  left: calc(100% - 4px);
+  bottom: 5px;
+  left: calc(100% + 2px);
   padding: 2px 8px;
   border-radius: 999px;
   background: rgb(var(--glass-base) / 0.94);
