@@ -20,12 +20,14 @@ export const PROJECT_SLIDES = [
   {
     id: "fm-society",
     kind: "community",
-    eyebrow: "Discord Community",
+    eyebrow: "Minecraft Community",
     title: "FM | Society",
-    blurb: "A Discord community I'm part of.",
-    monogram: "FM",
-    // Put the invite here, e.g. { href: "https://discord.gg/xxxx", label: "join on discord" }
-    link: null,
+    blurb: "Built different. On purpose.",
+    logo: "/assets/fm-society.webp",
+    link: {
+      href: "https://discord.gg/jayG8m27R",
+      label: "open on discord",
+    },
   },
   {
     id: "notice",
