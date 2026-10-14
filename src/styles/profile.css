@@ -466,3 +466,20 @@ html {
   opacity: 0;
   pointer-events: none;
 }
+
+/* "Active 3h ago" label, sitting right next to the grey offline dot. */
+.profile-last-active {
+  position: absolute;
+  z-index: 30;
+  bottom: 10px;
+  left: calc(100% - 4px);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(var(--glass-base) / 0.94);
+  border: 1px solid #ffffff14;
+  color: #b4b8bf;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}

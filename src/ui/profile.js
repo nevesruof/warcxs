@@ -1018,6 +1018,7 @@ var ve = n(e()),
     let {
         discord_user: n,
         discord_status: r,
+        last_online_at: lastOnline = null,
         active_on_discord_desktop: i,
         active_on_discord_mobile: o,
         active_on_discord_web: s,
@@ -1065,6 +1066,12 @@ var ve = n(e()),
         },
       },
       j = A[r] || A.offline,
+      lastActive =
+        r === `offline` && Number.isFinite(lastOnline) && lastOnline > 0
+          ? xi(lastOnline) === `now`
+            ? `Active just now`
+            : `Active ${xi(lastOnline)}`
+          : null,
       M = () => {
         if (r === `offline`) return [];
         let e =
@@ -1243,8 +1250,8 @@ var ve = n(e()),
                         border: `4px solid rgb(var(--glass-base) / 0.94)`,
                         filter: `drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35))`,
                       },
-                      'aria-label': j.label,
-                      title: j.label,
+                      'aria-label': lastActive ? `${j.label}, ${lastActive}` : j.label,
+                      title: lastActive ? `${j.label} · ${lastActive}` : j.label,
                       children: ((e) => {
                         switch (e) {
                           case `online`:
@@ -1293,6 +1300,11 @@ var ve = n(e()),
                         }
                       })(r || `offline`),
                     }),
+                    lastActive &&
+                      (0, jsxRuntime.jsx)(`span`, {
+                        className: `profile-last-active`,
+                        children: lastActive,
+                      }),
                   ],
                 }),
                 N &&
