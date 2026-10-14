@@ -17019,7 +17019,7 @@ var Zf = () =>
         children: [
           (0, K.jsx)(`p`, {
             className: `enter-gate__mark`,
-            children: `cheatinformer`,
+            children: `wArcxs`,
           }),
           (0, K.jsx)(`h1`, {
             children: o,
@@ -17310,7 +17310,7 @@ function Ip(e) {
     case `low-fps`:
       return {
         title: `Reduced effects enabled`,
-        description: `Your frame rate dropped below 30 FPS broseph 💔💔, some heavier visuals were reduced automatically to keep things smooth and cool!`,
+        description: `Your frame rate dropped below 30 FPS, so some heavier visuals were reduced automatically to keep things smooth.`,
       };
     default:
       return {
@@ -17355,7 +17355,7 @@ var Lp = () => {
                           (e.key === `Enter` || e.key === ` `) && (e.preventDefault(), i());
                         },
                         className: `performance-toast__action`,
-                        children: `Click here to enable full experience (Possible lag!!)`,
+                        children: `Enable full effects (may cause lag)`,
                       }),
                     ],
                   }),

@@ -8678,7 +8678,7 @@ var ss = () =>
   ls = [
     {
       name: `Discord`,
-      handle: `@cheatinformer`,
+      handle: `@warcxss`,
       icon: `/assets/discord-mark.png`,
       url: `https://discord.com/users/${DISCORD_USER_ID}`,
       accent: `#5865F2`,
@@ -8966,8 +8966,8 @@ var MainProfile = () => {
               (0, jsxRuntime.jsx)(C, {
                 to: `/`,
                 className: `site-wordmark`,
-                'aria-label': `cheatinformer home`,
-                children: `cheatinformer`,
+                'aria-label': `wArcxs home`,
+                children: `wArcxs`,
               }),
               (0, jsxRuntime.jsx)(`div`, {
                 className: `site-nav-stack`,
