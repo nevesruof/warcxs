@@ -1953,18 +1953,19 @@ body {
   --p-50: 247 247 247;
   --p-100: 240 240 240;
   --p-200: 227 227 227;
-  --p-300: 204 204 204;
-  --p-400: 184 184 184;
-  --p-500: 158 158 158;
-  --p-600: 133 133 133;
-  --p-700: 107 107 107;
-  --p-800: 87 87 87;
-  --p-900: 69 69 69;
-  --p-950: 41 41 41;
-  --theme-rgb: 107 107 107;
-  --accent-rgb: 158 158 158;
-  --glass-base: 15 15 15;
-  --background: #0e0e0e;
+  /* Accent ramp: 50-200 stay near-white (text), 300-600 are the orange accent. */
+  --p-300: 253 186 116;
+  --p-400: 251 146 60;
+  --p-500: 249 115 22;
+  --p-600: 234 88 12;
+  --p-700: 124 74 46;
+  --p-800: 87 52 33;
+  --p-900: 62 38 26;
+  --p-950: 34 22 16;
+  --theme-rgb: 249 115 22;
+  --accent-rgb: 249 115 22;
+  --glass-base: 12 12 12;
+  --background: #000;
   --foreground: #e4e4e4;
   --card: rgb(var(--glass-base) / 0.78);
   --card-border: rgb(var(--p-400) / 0.11);
@@ -3046,7 +3047,7 @@ input[type='range']::-moz-range-track {
   color: rgb(var(--ink-accent));
 }
 .site-nav__views {
-  color: rgb(var(--ink-subtle) / 0.62);
+  color: rgb(var(--ink-subtle) / 0.85);
   white-space: nowrap;
   justify-content: center;
   align-items: center;
@@ -3155,7 +3156,7 @@ input[type='range']::-moz-range-track {
   overflow: hidden;
 }
 .github-commit-strip__header {
-  color: rgb(var(--ink-subtle) / 0.72);
+  color: rgb(var(--ink-subtle) / 0.88);
   text-transform: lowercase;
   justify-content: center;
   align-items: center;
@@ -3269,7 +3270,7 @@ input[type='range']::-moz-range-track {
   color: rgb(var(--ink-text));
 }
 .github-contribution-graph__legend {
-  color: rgb(var(--ink-subtle) / 0.52);
+  color: rgb(var(--ink-subtle) / 0.8);
   text-transform: lowercase;
   justify-content: center;
   align-items: center;
@@ -4112,22 +4113,28 @@ input[type='range']::-moz-range-track {
   font-size: 0.84rem;
 }
 .enter-gate__silent {
-  color: rgb(var(--ink-subtle) / 0.48);
+  color: rgb(var(--ink-subtle) / 0.82);
   cursor: pointer;
   letter-spacing: 0.01em;
   background: 0 0;
   border: 0;
-  margin: 1.35rem auto 0;
+  /* 44px-tall hit area without moving the layout */
+  margin: 0.5rem auto 0;
+  padding: 0.85rem 1.25rem;
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   line-height: 1.4;
   transition: color 0.16s;
   display: block;
 }
 .enter-gate__silent:hover,
 .enter-gate__silent:focus-visible {
-  color: rgb(var(--ink-subtle) / 0.78);
+  color: rgb(var(--p-300));
   outline: none;
+}
+.enter-gate__silent:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .bento-grid {
   flex: auto;

@@ -109,6 +109,7 @@
   padding: 0 10px;
 }
 .profile-badge-item {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -173,7 +174,14 @@
   outline: 1px solid #ffffff99;
   outline-offset: 2px;
 }
+.profile-badge-item::after {
+  /* Larger touch/hover area; the 19px icon keeps its size. */
+  content: '';
+  position: absolute;
+  inset: -9px -4px;
+}
 .profile-bio-link {
+  padding-block: 0.3rem;
   color: inherit;
   text-decoration: underline;
   text-decoration-color: #fff;
