@@ -31,6 +31,7 @@ La tarjeta con barra de progreso (proyectos, comunidades de Discord y el aviso) 
 - Al entrar se reproduce únicamente la pista activa de Spotify, cuando está disponible. Si no hay una pista activa, la página permanece en silencio.
 - El audio en vivo sigue los tiempos de Discord sin depender de los renders de la interfaz. Los fallos temporales de YouTube se reintentan con esperas progresivas; cambiar o terminar la canción cancela el intento anterior. Al detener una pista manual se retoma la canción actualmente activa.
 - Las letras proceden de LRCLIB. Las líneas LRC se resaltan según el segundo de reproducción; si no existen, se muestran las letras simples disponibles.
+- El estado de ánimo manual se edita en `public/data/mood.json` (`enabled`, `emoji`, `text`, `expiresAt` opcional); es independiente del estado personalizado de Discord.
 - La reproducción de una pista usa YouTube dentro de la página cuando `YOUTUBE_API_KEY` está configurada. Si no lo está, las pistas elegidas manualmente se abren en el reproductor embebido de Spotify.
 - Las búsquedas de la lista de canciones se adelantan desde la carga de datos, con dos solicitudes de fondo como máximo y una caché persistente. Play reutiliza la pista preparada sin volver a cargarla; `Stop` conserva su búfer y cancela solicitudes pendientes.
 - Roblox consulta el usuario `zahidtql12` y su juego actual. Si la presencia no está disponible, intenta usar el último juego obtenido por el bot.
@@ -48,9 +49,9 @@ Parte de `.env.example` y configura las variables en Vercel o en tu entorno de s
 | `ACTIVITY_BOT_URL` | Opcional: reemplaza `http://fi10.bot-hosting.cloud:26022/api/activity`. Si está configurada en Vercel, actualízala también al cambiar de servidor. |
 | `ACTIVITY_BOT_TOKEN` | Debe coincidir con `API_TOKEN` del bot. Se envía siempre que esté definido, también con la URL por defecto. Úsalo con una URL `https://`. |
 | `DISCORD_BOT_TOKEN` | Token de un bot de Discord para actualizar foto y banner directamente cada minuto. Se mantiene únicamente en el servidor. |
-| `YOUTUBE_API_KEY` | Habilita audio sincronizado dentro de la página. |
+| `YOUTUBE_API_KEY` | Habilita audio sincronizado dentro de la página. Si falta o se agota la cuota, `/api/playback` intenta la búsqueda pública de YouTube (desactívalo con `YOUTUBE_SCRAPE_FALLBACK=off`) y devuelve el motivo en `reason`. |
+| `YOUTUBE_SCRAPE_FALLBACK` | `off` desactiva la búsqueda pública de respaldo. |
 | `IGDB_CLIENT_ID` / `IGDB_CLIENT_SECRET` | Opcionales: amplían las fichas de juegos con datos de IGDB. |
-| `ROBLOX_COOKIE` | Cookie `.ROBLOSECURITY` que permite consultar presencia de Roblox. |
 
 Nunca expongas estas variables en el navegador ni las subas al repositorio.
 

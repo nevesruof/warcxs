@@ -65,12 +65,13 @@ test('Existing bot powers presence and history without environment configuration
   assert.equal(live.body.data.activities[0].name, 'Minecraft');
   assert.equal(recent.code, 200);
   assert.equal(recent.body.recentActivities[0].name, 'Minecraft');
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, 'http://fi10.bot-hosting.cloud:26022/api/activity');
-  assert.deepEqual(calls[0].options.headers, {});
+  const botCalls = () => calls.filter((call) => String(call.url).includes('bot-hosting.cloud'));
+  assert.equal(botCalls().length, 1);
+  assert.equal(botCalls()[0].url, 'http://fi10.bot-hosting.cloud:26022/api/activity');
+  assert.deepEqual(botCalls()[0].options.headers, {});
   process.env.ACTIVITY_BOT_URL = '  ';
   await readBot();
-  assert.equal(calls.length, 1, 'An empty override must still use the existing bot');
+  assert.equal(botCalls().length, 1, 'An empty override must still use the existing bot');
 });
 
 test('A configured token is sent even when the default bot URL is used', async (t) => {

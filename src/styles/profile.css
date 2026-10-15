@@ -667,3 +667,24 @@ html {
   color: #8d9198;
   font-size: 0.75rem;
 }
+
+/* Manual mood (public/data/mood.json); separate from the Discord status bubble. */
+.profile-mood {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgb(var(--glass-base) / 0.7);
+  border: 1px solid #ffffff14;
+  color: #d4d7dc;
+  font-size: 12px;
+  line-height: 18px;
+}
+.profile-mood__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

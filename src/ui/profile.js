@@ -6,6 +6,7 @@ import { createScrollArea } from './scroll-area.js';
 import { startBackgroundRefresh } from '../services/background-refresh.js';
 import {createRecentSongs} from './recent-songs.js';
 import {ProjectCarousel} from './projects-carousel.js';
+import {watchMood} from '../services/mood.js';
 import {Radio as K, Pause as W, Play as G, Headphones as R, Expand as H} from './music-icons.js';
 import {playbackSong, isSelectedSong, statsTrackKey, SONG_AUDIO_FIELDS} from '../services/music-playback.js';
 
@@ -1506,6 +1507,7 @@ var ve = n(e()),
             (0, jsxRuntime.jsxs)(`div`, {
               className: `space-y-3`,
               children: [
+                (0, jsxRuntime.jsx)(MoodPill, {}),
                 k &&
                   (0, jsxRuntime.jsxs)(motion.section, {
                     className: `space-y-1.5`,
@@ -6392,7 +6394,8 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
       ],
     }),
   ActivityCard = ({ activity: e, gameInfo, onSelect }) => {
-    let [t, n] = (0, React.useState)(``);
+    let [t, n] = (0, React.useState)(``),
+      [failed, setFailed] = (0, React.useState)(!1);
     (0, React.useEffect)(() => {
       if (!e.timestamps?.start) return;
       let t = () => n(bi(e.timestamps.start));
@@ -6422,7 +6425,7 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
         (0, jsxRuntime.jsxs)(`div`, {
           className: `flex items-center gap-3`,
           children: [
-            r
+            r && !failed
               ? (0, jsxRuntime.jsxs)(`div`, {
                   className: `relative flex-shrink-0`,
                   children: [
@@ -6434,9 +6437,7 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
                         className: `h-[60px] w-[60px] rounded-lg object-cover ring-1 ring-purple-500/10`,
                         loading: `lazy`,
                         decoding: `async`,
-                        onError: (e) => {
-                          e.target.style.display = `none`;
-                        },
+                        onError: () => setFailed(!0),
                       }),
                     }),
                     i
@@ -6453,7 +6454,7 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
                       : null,
                   ],
                 })
-              : null,
+              : (0, jsxRuntime.jsx)(GameTile, { name: e.name, size: 60 }),
             (0, jsxRuntime.jsxs)(`div`, {
               className: `min-w-0 flex-1`,
               children: [
@@ -6503,7 +6504,8 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
     });
   },
   ActivityDetails = ({ activity: e, gameInfo: t, robloxProfile: n, onSelect: r }) => {
-    let i =
+    let [iconFailed, setIconFailed] = (0, React.useState)(!1),
+      i =
         Me(e.largeImage, e.applicationId) ||
         (t?.iconUrl && !t.iconUrl.includes(`dcdn.dstn.to/app-icons`) ? t.iconUrl : void 0),
       o = hasGameDetails(t),
@@ -6513,21 +6515,14 @@ var Gi = ({ title: e, description: t, icon: n, className: r = ``, children: i })
       u = Oi(e),
       d = (0, jsxRuntime.jsxs)(jsxRuntime.Fragment, {
         children: [
-          i
+          i && !iconFailed
             ? (0, jsxRuntime.jsx)(`img`, {
                 src: i,
                 alt: e.name,
                 className: `h-10 w-10 flex-shrink-0 rounded-lg object-cover ring-1 ring-purple-500/10`,
-                onError: (e) => {
-                  e.target.style.display = `none`;
-                },
+                onError: () => setIconFailed(!0),
               })
-            : (0, jsxRuntime.jsx)(`div`, {
-                className: `flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-purple-400/[0.06]`,
-                children: (0, jsxRuntime.jsx)(F, {
-                  className: `h-5 w-5 text-purple-400/30`,
-                }),
-              }),
+            : (0, jsxRuntime.jsx)(GameTile, { name: e.name, size: 40 }),
           (0, jsxRuntime.jsxs)(`div`, {
             className: `min-w-0 flex-1`,
             children: [
@@ -7403,27 +7398,9 @@ var VolumeControl = () => {
                     duration: 0.24,
                     ease: `easeOut`,
                   },
-                  onHoverStart: () => {
-                    d || u(!0);
-                  },
-                  onHoverEnd: () => {
-                    d || u(!1);
-                  },
-                  onFocusCapture: () => {
-                    d || u(!0);
-                  },
-                  onBlurCapture: (e) => {
-                    !d && !e.currentTarget.contains(e.relatedTarget) && u(!1);
-                  },
-                  children: (0, jsxRuntime.jsxs)(motion.div, {
+                  'data-open': l ? `true` : `false`,
+                  children: (0, jsxRuntime.jsxs)(`div`, {
                     className: `global-volume-container`,
-                    animate: {
-                      width: l ? 172 : 44,
-                      boxShadow: l
-                        ? `0 14px 30px rgba(0, 0, 0, 0.28)`
-                        : `0 10px 22px rgba(0, 0, 0, 0.24)`,
-                    },
-                    transition: fa,
                     children: [
                       (0, jsxRuntime.jsx)(`button`, {
                         type: `button`,
@@ -7432,53 +7409,12 @@ var VolumeControl = () => {
                         },
                         className: `global-volume-toggle`,
                         'aria-label': `Volume control`,
-                        children: (0, jsxRuntime.jsx)(AnimatePresence, {
-                          initial: !1,
-                          mode: `wait`,
-                          children: (0, jsxRuntime.jsx)(
-                            motion.span,
-                            {
-                              initial: {
-                                opacity: 0,
-                                scale: 0.72,
-                                rotate: -12,
-                              },
-                              animate: {
-                                opacity: 1,
-                                scale: 1,
-                                rotate: 0,
-                              },
-                              exit: {
-                                opacity: 0,
-                                scale: 0.72,
-                                rotate: 12,
-                              },
-                              transition: {
-                                duration: 0.16,
-                                ease: `easeOut`,
-                              },
-                              className: `flex items-center justify-center`,
-                              children: (0, jsxRuntime.jsx)(i, {
-                                className: `h-[18px] w-[18px]`,
-                              }),
-                            },
-                            o,
-                          ),
+                        children: (0, jsxRuntime.jsx)(i, {
+                          className: `h-[18px] w-[18px]`,
                         }),
                       }),
-                      (0, jsxRuntime.jsxs)(motion.div, {
+                      (0, jsxRuntime.jsxs)(`div`, {
                         className: `global-volume-slider-wrap`,
-                        animate: {
-                          opacity: +!!l,
-                          x: l ? 0 : -8,
-                        },
-                        transition: {
-                          duration: 0.16,
-                          ease: `easeOut`,
-                        },
-                        style: {
-                          pointerEvents: l ? `auto` : `none`,
-                        },
                         children: [
                           (0, jsxRuntime.jsx)(`div`, {
                             ref: c,
@@ -7500,7 +7436,6 @@ var VolumeControl = () => {
                             step: 1,
                             value: e,
                             onChange: h,
-                            onInput: h,
                             className: `global-volume-slider`,
                             'aria-label': `Global volume`,
                           }),
@@ -9009,3 +8944,37 @@ var MainProfile = () => {
   });
 };
 export { MainProfile as default };
+
+// Stand-in for a game whose icon could not be resolved: the first letters of
+// the name on a neutral tile (reads better than a generic gamepad).
+function gameInitials(name) {
+  const words = String(name || '').match(/[\p{L}\p{N}]+/gu) || [];
+  if (!words.length) return '?';
+  const letters = words.length > 1 ? words[0][0] + words[1][0] : words[0].slice(0, 2);
+  return letters.toUpperCase();
+}
+function GameTile({ name, size, className = '' }) {
+  return (0, jsxRuntime.jsx)('div', {
+    'aria-hidden': 'true',
+    className: `flex flex-shrink-0 select-none items-center justify-center rounded-lg bg-white/[0.07] font-semibold tracking-wide text-white/55 ring-1 ring-white/10 ${className}`,
+    style: { width: size, height: size, fontSize: Math.round(size * 0.36) },
+    children: gameInitials(name),
+  });
+}
+
+// Manual mood from /data/mood.json; independent of the Discord custom status.
+function MoodPill() {
+  const [mood, setMood] = React.useState(null);
+  React.useEffect(() => watchMood(setMood), []);
+  if (!mood) return null;
+  return (0, jsxRuntime.jsxs)('div', {
+    className: 'profile-mood',
+    role: 'status',
+    children: [
+      mood.emoji
+        ? (0, jsxRuntime.jsx)('span', { className: 'profile-mood__emoji', 'aria-hidden': 'true', children: mood.emoji })
+        : null,
+      (0, jsxRuntime.jsx)('span', { className: 'profile-mood__text', children: mood.text }),
+    ],
+  });
+}

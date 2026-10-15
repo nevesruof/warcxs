@@ -65,7 +65,8 @@ test('lookupGame bridges Discord -> IGDB and maps the full game card', async (t)
     // The unmapped website category (42) is dropped instead of surfacing as a broken link.
     assert.deepEqual(info.websites, [{ url: 'https://twitch.tv/rainbow6', hostname: 'twitch', category: 6 }]);
   });
-  assert.equal(calls.length, 3);
+  // application rpc, Twitch token, IGDB search, Discord detectable list (icon fallback)
+  assert.equal(calls.length, 4);
 });
 
 test('lookupGame skips non-numeric ids without any network call', async (t) => {

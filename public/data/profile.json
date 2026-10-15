@@ -25,7 +25,7 @@
           "tag": "LTUS",
           "icon": "/assets/ltus-reference.jpeg"
         },
-        "bio": "Developer @ KatanaCL — Best Anti-ScreenShare utility.\nhttps://warcxs.com/\nhttps://arcxsdev.com/\nhttps://dsc.gg/fmsociety",
+        "bio": "https://warcxs.com/\nhttps://arcxsdev.com/\nhttps://dsc.gg/fmsociety",
         "banner": null,
         "accent_color": 0
       },
@@ -54,7 +54,7 @@
         {
           "id": "legacy-username",
           "icon": "/assets/discord-legacy-username.png",
-          "description": "Originally known as"
+          "description": "Originally known as Nidrox#8245"
         },
         {
           "id": "quest",
