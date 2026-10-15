@@ -7398,9 +7398,27 @@ var VolumeControl = () => {
                     duration: 0.24,
                     ease: `easeOut`,
                   },
-                  'data-open': l ? `true` : `false`,
-                  children: (0, jsxRuntime.jsxs)(`div`, {
+                  onHoverStart: () => {
+                    d || u(!0);
+                  },
+                  onHoverEnd: () => {
+                    d || u(!1);
+                  },
+                  onFocusCapture: () => {
+                    d || u(!0);
+                  },
+                  onBlurCapture: (e) => {
+                    !d && !e.currentTarget.contains(e.relatedTarget) && u(!1);
+                  },
+                  children: (0, jsxRuntime.jsxs)(motion.div, {
                     className: `global-volume-container`,
+                    animate: {
+                      width: l ? 172 : 44,
+                      boxShadow: l
+                        ? `0 14px 30px rgba(0, 0, 0, 0.28)`
+                        : `0 10px 22px rgba(0, 0, 0, 0.24)`,
+                    },
+                    transition: fa,
                     children: [
                       (0, jsxRuntime.jsx)(`button`, {
                         type: `button`,
@@ -7409,12 +7427,53 @@ var VolumeControl = () => {
                         },
                         className: `global-volume-toggle`,
                         'aria-label': `Volume control`,
-                        children: (0, jsxRuntime.jsx)(i, {
-                          className: `h-[18px] w-[18px]`,
+                        children: (0, jsxRuntime.jsx)(AnimatePresence, {
+                          initial: !1,
+                          mode: `wait`,
+                          children: (0, jsxRuntime.jsx)(
+                            motion.span,
+                            {
+                              initial: {
+                                opacity: 0,
+                                scale: 0.72,
+                                rotate: -12,
+                              },
+                              animate: {
+                                opacity: 1,
+                                scale: 1,
+                                rotate: 0,
+                              },
+                              exit: {
+                                opacity: 0,
+                                scale: 0.72,
+                                rotate: 12,
+                              },
+                              transition: {
+                                duration: 0.16,
+                                ease: `easeOut`,
+                              },
+                              className: `flex items-center justify-center`,
+                              children: (0, jsxRuntime.jsx)(i, {
+                                className: `h-[18px] w-[18px]`,
+                              }),
+                            },
+                            o,
+                          ),
                         }),
                       }),
-                      (0, jsxRuntime.jsxs)(`div`, {
+                      (0, jsxRuntime.jsxs)(motion.div, {
                         className: `global-volume-slider-wrap`,
+                        animate: {
+                          opacity: +!!l,
+                          x: l ? 0 : -8,
+                        },
+                        transition: {
+                          duration: 0.16,
+                          ease: `easeOut`,
+                        },
+                        style: {
+                          pointerEvents: l ? `auto` : `none`,
+                        },
                         children: [
                           (0, jsxRuntime.jsx)(`div`, {
                             ref: c,
@@ -7436,6 +7495,7 @@ var VolumeControl = () => {
                             step: 1,
                             value: e,
                             onChange: h,
+                            onInput: h,
                             className: `global-volume-slider`,
                             'aria-label': `Global volume`,
                           }),
@@ -8443,29 +8503,6 @@ function Oo({
     }
   );
 }
-function SpotifyPlaybackNotice() {
-  const audio = useAudioFields([
-    'playbackSource', 'isAudioDisabled', 'isAutoplayBlocked',
-  ]);
-  const blocked = audio.playbackSource === 'spotify' &&
-    !audio.isAudioDisabled && audio.isAutoplayBlocked;
-  return (0, jsxRuntime.jsx)(AnimatePresence, {
-    children: blocked ? (0, jsxRuntime.jsx)(motion.div, {
-      className: 'pointer-events-none fixed inset-x-0 bottom-5 z-[35] flex justify-center px-4 sm:hidden',
-      initial: { opacity: 0, y: 18 },
-      animate: { opacity: 1, y: 0 },
-      exit: { opacity: 0, y: 12 },
-      transition: { duration: 0.22, ease: 'easeOut' },
-      children: (0, jsxRuntime.jsx)(motion.button, {
-        type: 'button',
-        onClick: audio.retrySpotifyPlayback,
-        className: 'pointer-events-auto inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-[rgba(12,10,24,0.92)] px-4 py-2 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.34)] backdrop-blur-xl',
-        whileTap: { scale: 0.98 },
-        children: 'Tap to resume audio',
-      }),
-    }, 'mobile-audio-unlock') : null,
-  });
-}
 function Fo({
   albumArtUrl: e,
   artist: t,
@@ -8851,7 +8888,6 @@ var MainProfile = () => {
         trackId: O?.track_id,
         videoId: O?.youtube_video_id || O?.youtube_url,
       }),
-      (0, jsxRuntime.jsx)(SpotifyPlaybackNotice, {}),
       (0, jsxRuntime.jsx)(NowPlayingDock, {
         spotify: O,
       }),
