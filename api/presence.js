@@ -1,5 +1,6 @@
 import { readBot, presencePayload, USER_ID } from '../lib/activity.js';
 import { LIVE_CACHE } from '../lib/http.js';
+import { lookupAppIcon } from '../lib/app-icons.js';
 const STATIC_DISCORD_USER = {
   "avatar": "26009e0a7070d0ea156a8ec9f3880e74",
   "avatar_decoration_data": null,
@@ -34,7 +35,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false });
   }
   try {
-    return res.status(200).json(presencePayload(await readBot(), STATIC_DISCORD_USER));
+    const payload = presencePayload(await readBot(), STATIC_DISCORD_USER);
+    // Games without their own artwork still get the app icon (cached per day).
+    await Promise.all(
+      payload.data.activities
+        .filter((a) => a.type === 0 && !a.assets?.large_image)
+        .map(async (a) => {
+          const icon = await lookupAppIcon({ applicationId: a.application_id, name: a.name }).catch(() => null);
+          if (icon) a.assets = { ...a.assets, large_image: icon };
+        }),
+    );
+    return res.status(200).json(payload);
   } catch {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(503).json({ success: false, error: 'Activity bot temporarily unavailable' });

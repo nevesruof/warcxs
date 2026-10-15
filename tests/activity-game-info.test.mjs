@@ -93,9 +93,11 @@ test('New bot games resolve automatically, cache requests and preserve partial r
     assert.deepEqual(first, second);
     assert.equal(first[0].source, 'discord');
     assert.ok(hasGameDetails(first[0]));
-    assert.equal(calls.length, 2);
+    // application rpc + Steam search (+ the shared Discord detectable list, fetched once per process)
+    const afterFirst = calls.length;
+    assert.ok(afterFirst >= 2 && afterFirst <= 3);
     await readGameInfo(bot, [activityGameKey(activity)]);
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, afterFirst);
   } finally {
     globalThis.fetch = originalFetch;
   }

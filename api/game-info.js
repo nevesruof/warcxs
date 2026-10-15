@@ -3,6 +3,7 @@
 // Discord's public RPC endpoint gives the game's name, then IGDB is searched by that name.
 import { cached, fetchJson, endpoint } from '../lib/http.js';
 import { readBot } from '../lib/activity.js';
+import { applicationInfo, lookupAppIcon } from '../lib/app-icons.js';
 import { readGameInfo } from '../lib/game-info.js';
 
 // IGDB v4 website category enum (only the ones the profile card links out to).
@@ -52,10 +53,8 @@ async function igdbAuth() {
 }
 
 async function discordAppName(applicationId) {
-  return cached(`discord:app-name:${applicationId}`, 24 * 3600 * 1000, async () => {
-    const app = await fetchJson(`https://discord.com/api/v10/applications/${applicationId}/rpc`);
-    return typeof app.name === 'string' && app.name.trim() ? app.name.trim() : null;
-  }).catch(() => null);
+  const app = await applicationInfo(applicationId).catch(() => null);
+  return typeof app?.name === 'string' && app.name.trim() ? app.name.trim() : null;
 }
 
 async function searchIgdb(name) {
@@ -80,7 +79,7 @@ async function searchIgdb(name) {
   return game || null;
 }
 
-function toGameInfo(applicationId, game) {
+function toGameInfo(applicationId, game, iconUrl = null) {
   const developers = [];
   const publishers = [];
   for (const link of game.involved_companies || []) {
@@ -94,6 +93,7 @@ function toGameInfo(applicationId, game) {
     igdbId: game.id,
     slug: game.slug || null,
     name: game.name,
+    iconUrl,
     coverUrl: image(game.cover?.image_id, 'cover_big'),
     bannerUrl: image(game.screenshots?.[0]?.image_id, '1080p'),
     summary: game.summary || null,
@@ -126,7 +126,9 @@ export async function lookupGame(applicationId) {
     const name = await discordAppName(applicationId);
     if (!name) return null;
     const game = await searchIgdb(name);
-    return game ? toGameInfo(applicationId, game) : null;
+    if (!game) return null;
+    const iconUrl = await lookupAppIcon({ applicationId, name }, 256).catch(() => null);
+    return toGameInfo(applicationId, game, iconUrl);
   });
 }
 

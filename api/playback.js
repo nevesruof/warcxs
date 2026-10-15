@@ -1,31 +1,26 @@
-import { cached, endpoint, fetchJson, rateLimit, requiredText } from '../lib/http.js';
+import { cached, endpoint, rateLimit, requiredText } from '../lib/http.js';
+import { findVideos } from '../lib/youtube.js';
 
-export default endpoint(
-  async (params, req) => {
-    const track = requiredText(params, 'track');
-    const artist = requiredText(params, 'artist');
-    const apiKey = process.env.YOUTUBE_API_KEY;
-    if (!apiKey) return { videoIds: [], available: false, reason: 'youtube-not-configured' };
+const FOUND = 'public, s-maxage=86400, stale-while-revalidate=604800';
+const MISSED = 'public, s-maxage=30';
 
-    return cached(`youtube:${track}:${artist}`, 6 * 60 * 60 * 1000, async () => {
-      // Every distinct search costs 100 YouTube quota units (10,000/day by
-      // default), so unique lookups are limited per client. Cache hits are free.
+export default endpoint(async (params, req, res) => {
+  const track = requiredText(params, 'track');
+  const artist = requiredText(params, 'artist');
+  const key = `youtube:${track.toLowerCase()}:${artist.toLowerCase()}`;
+  // Found songs are kept for a day; misses only briefly, so a quota reset or a
+  // fixed key is picked up quickly instead of being cached as "unavailable".
+  const result = await cached(
+    key,
+    (value) => (value.available ? 24 * 3600 * 1000 : 60 * 1000),
+    () => {
+      // Each distinct lookup can spend YouTube quota; cache hits are free.
       rateLimit(req, 'playback', 30);
-      const query = new URLSearchParams({
-        key: apiKey,
-        part: 'snippet',
-        type: 'video',
-        videoEmbeddable: 'true',
-        videoSyndicated: 'true',
-        maxResults: '5',
-        q: `${artist} ${track} official audio`,
-      });
-      const result = await fetchJson(`https://www.googleapis.com/youtube/v3/search?${query}`);
-      const videoIds = (Array.isArray(result.items) ? result.items : [])
-        .map((item) => item.id?.videoId)
-        .filter(Boolean);
-      return { videoIds, videoId: videoIds[0] || null, available: videoIds.length > 0 };
-    });
-  },
-  { maxAge: 3600 },
-);
+      return findVideos({ track, artist });
+    },
+  );
+  res?.setHeader('Cache-Control', result.available ? FOUND : MISSED);
+  if (result.reason) console.warn(`[playback] no match (${result.reason}) for "${artist} - ${track}"`);
+  else if (result.apiReason) console.warn(`[playback] YouTube API unavailable (${result.apiReason}); used ${result.source}`);
+  return result;
+});

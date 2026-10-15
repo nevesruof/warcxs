@@ -12,6 +12,8 @@ const { jsx, jsxs } = jsxRuntime;
 const { useState, useRef, useEffect, useCallback } = React;
 
 const DRAG_START_PX = 6;
+const WHEEL_THRESHOLD = 30;
+const WHEEL_COOLDOWN_MS = 520;
 
 function ExternalIcon() {
   return jsxs("svg", {
@@ -128,7 +130,6 @@ function useReducedMotion() {
 export function ProjectCarousel({ slides = PROJECT_SLIDES, duration = SLIDE_DURATION_MS }) {
   const count = slides.length;
   const [index, setIndex] = useState(0);
-  const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [pressed, setPressed] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
@@ -138,6 +139,9 @@ export function ProjectCarousel({ slides = PROJECT_SLIDES, duration = SLIDE_DURA
   const viewport = useRef(null);
   const gesture = useRef(null);
   const suppressClick = useRef(false);
+
+  const indexRef = useRef(0);
+  indexRef.current = index;
 
   const go = useCallback((target) => setIndex(wrap(target, count)), [count]);
   const step = useCallback((direction) => setIndex((current) => wrap(current + direction, count)), [count]);
@@ -157,7 +161,7 @@ export function ProjectCarousel({ slides = PROJECT_SLIDES, duration = SLIDE_DURA
     return () => observer.disconnect();
   }, []);
 
-  const paused = hovered || focused || pressed || !onScreen || !tabVisible;
+  const paused = focused || pressed || !onScreen || !tabVisible;
   const autoplay = !reduced && count > 1;
 
   // The timer, not the CSS animation, decides when to advance: global
@@ -178,6 +182,40 @@ export function ProjectCarousel({ slides = PROJECT_SLIDES, duration = SLIDE_DURA
       remaining.current -= performance.now() - startedAt.current;
     };
   }, [index, paused, autoplay, step]);
+
+  // Mouse wheel / trackpad: one slide per gesture. At either end the event is
+  // left alone so the page keeps scrolling. Native listener because React's
+  // wheel handlers are passive and cannot call preventDefault.
+  useEffect(() => {
+    const element = root.current;
+    if (!element || count < 2) return;
+    let accumulated = 0;
+    let lockedUntil = 0;
+    let resetTimer = 0;
+    const onWheel = (event) => {
+      if (event.ctrlKey || event.metaKey || event.defaultPrevented) return;
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      if (!delta) return;
+      const direction = delta > 0 ? 1 : -1;
+      const target = indexRef.current + direction;
+      if (target < 0 || target >= count) return;
+      event.preventDefault();
+      const now = performance.now();
+      if (now < lockedUntil) return;
+      accumulated += delta * (event.deltaMode === 1 ? 16 : 1);
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => (accumulated = 0), 160);
+      if (Math.abs(accumulated) < WHEEL_THRESHOLD) return;
+      accumulated = 0;
+      lockedUntil = now + WHEEL_COOLDOWN_MS;
+      setIndex(target);
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      clearTimeout(resetTimer);
+      element.removeEventListener("wheel", onWheel);
+    };
+  }, [count]);
 
   const setDragVars = (element, dx) => {
     if (dx === null) {
@@ -246,8 +284,6 @@ export function ProjectCarousel({ slides = PROJECT_SLIDES, duration = SLIDE_DURA
     "data-paused": paused ? "true" : undefined,
     "data-autoplay": autoplay ? "true" : undefined,
     onKeyDown,
-    onPointerEnter: (e) => e.pointerType === "mouse" && setHovered(true),
-    onPointerLeave: (e) => e.pointerType === "mouse" && setHovered(false),
     onFocus: (e) => setFocused(e.target.matches?.(":focus-visible") ?? false),
     onBlur: () => setFocused(false),
     children: [
