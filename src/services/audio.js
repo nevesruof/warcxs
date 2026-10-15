@@ -615,14 +615,20 @@ export function createAudioComponents(React) {
   };
   function AudioProvider({ children }) {
     React.useEffect(() => {
-      document.addEventListener("click", retryYoutube);
-      document.addEventListener("keydown", retryYoutube);
+      // Browsers only let a page resume blocked audio from inside a real user
+      // gesture, so any tap/click/key anywhere resumes it silently (no prompt).
+      // touchend/pointerup count as activation on iOS; touchstart does not.
+      const gesture = ["pointerup", "touchend", "click", "keydown"];
+      for (const type of gesture) document.addEventListener(type, retryYoutube, { passive: true });
+      document.addEventListener("visibilitychange", retryYoutube);
+      window.addEventListener("pageshow", retryYoutube);
       document.addEventListener("visibilitychange", spotifySync.tick);
       window.addEventListener("pageshow", spotifySync.tick);
       window.addEventListener("online", spotifySync.retry);
       return () => {
-        document.removeEventListener("click", retryYoutube);
-        document.removeEventListener("keydown", retryYoutube);
+        for (const type of gesture) document.removeEventListener(type, retryYoutube);
+        document.removeEventListener("visibilitychange", retryYoutube);
+        window.removeEventListener("pageshow", retryYoutube);
         document.removeEventListener("visibilitychange", spotifySync.tick);
         window.removeEventListener("pageshow", spotifySync.tick);
         window.removeEventListener("online", spotifySync.retry);

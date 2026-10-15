@@ -1953,18 +1953,19 @@ body {
   --p-50: 247 247 247;
   --p-100: 240 240 240;
   --p-200: 227 227 227;
-  --p-300: 204 204 204;
-  --p-400: 184 184 184;
-  --p-500: 158 158 158;
-  --p-600: 133 133 133;
-  --p-700: 107 107 107;
-  --p-800: 87 87 87;
-  --p-900: 69 69 69;
-  --p-950: 41 41 41;
-  --theme-rgb: 107 107 107;
-  --accent-rgb: 158 158 158;
-  --glass-base: 15 15 15;
-  --background: #0e0e0e;
+  /* Accent ramp: 50-200 stay near-white (text), 300-600 are the orange accent. */
+  --p-300: 253 186 116;
+  --p-400: 251 146 60;
+  --p-500: 249 115 22;
+  --p-600: 234 88 12;
+  --p-700: 124 74 46;
+  --p-800: 87 52 33;
+  --p-900: 62 38 26;
+  --p-950: 34 22 16;
+  --theme-rgb: 249 115 22;
+  --accent-rgb: 249 115 22;
+  --glass-base: 12 12 12;
+  --background: #000;
   --foreground: #e4e4e4;
   --card: rgb(var(--glass-base) / 0.78);
   --card-border: rgb(var(--p-400) / 0.11);
@@ -2613,35 +2614,13 @@ input[type='range']::-moz-range-track {
   left: max(0.75rem, env(safe-area-inset-left));
 }
 .global-volume-container {
-  --vol-open: 172px;
   border: 1px solid rgb(var(--p-400) / 0.12);
   background: rgb(var(--glass-base) / 0.88);
   border-radius: 999px;
   align-items: center;
-  /* The toggle sits on the right edge, so the pill grows leftwards and the
-     icon stays under the cursor. */
-  flex-direction: row-reverse;
-  width: 44px;
   height: 44px;
-  box-shadow: 0 10px 22px rgb(0 0 0 / 0.24);
   display: flex;
   overflow: hidden;
-  contain: layout paint;
-  transition: width 0.2s cubic-bezier(0.22, 1, 0.36, 1) 0.07s;
-}
-.global-volume-root[data-open='true'] .global-volume-container {
-  width: var(--vol-open);
-  transition-delay: 0s;
-}
-@media (hover: hover) and (pointer: fine) {
-  .global-volume-root:hover .global-volume-container {
-    width: var(--vol-open);
-    transition-delay: 0s;
-  }
-}
-.global-volume-root:focus-within .global-volume-container {
-  width: var(--vol-open);
-  transition-delay: 0s;
 }
 .global-volume-toggle {
   width: 44px;
@@ -2658,28 +2637,9 @@ input[type='range']::-moz-range-track {
 }
 .global-volume-slider-wrap {
   --global-volume-end-gap: 14px;
-  padding-left: var(--global-volume-end-gap);
+  padding-right: var(--global-volume-end-gap);
   flex: 1;
-  min-width: 0;
   position: relative;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.14s ease,
-    visibility 0s linear 0.2s;
-}
-.global-volume-root[data-open='true'] .global-volume-slider-wrap,
-.global-volume-root:focus-within .global-volume-slider-wrap {
-  opacity: 1;
-  visibility: visible;
-  transition-delay: 0.04s, 0s;
-}
-@media (hover: hover) and (pointer: fine) {
-  .global-volume-root:hover .global-volume-slider-wrap {
-    opacity: 1;
-    visibility: visible;
-    transition-delay: 0.04s, 0s;
-  }
 }
 .global-volume-track-shell {
   background:
@@ -2702,7 +2662,7 @@ input[type='range']::-moz-range-track {
     0 0 24px rgb(var(--p-50) / 0.14);
 }
 .global-volume-slider[type='range'] {
-  inset: 50% 0 auto var(--global-volume-end-gap);
+  inset: 50% var(--global-volume-end-gap) auto 0;
   background: 0 0;
   width: auto;
   height: 24px;
@@ -2931,10 +2891,6 @@ input[type='range']::-moz-range-track {
 }
 :root[data-performance-mode='low'] .global-volume-container {
   background: rgb(var(--glass-base) / 0.92);
-}
-:root[data-performance-mode='low'] .global-volume-container,
-:root[data-performance-mode='low'] .global-volume-slider-wrap {
-  transition-duration: 0.12s !important;
 }
 :root[data-performance-mode='low'] .gradient-mesh {
   background:
