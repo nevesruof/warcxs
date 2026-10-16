@@ -1046,7 +1046,7 @@ var ve = n(e()),
       x = n.avatar_decoration_data?.asset || t?.user.avatar_decoration_data?.asset,
       C = t?.user.clan || n.clan,
       T = C?.icon,
-      E = t?.user.display_name_styles || n.display_name_styles,
+      E = t?.user && Object.hasOwn(t.user, `display_name_styles`) ? t.user.display_name_styles : n.display_name_styles,
       D = (0, React.useMemo)(() => (E ? _e(E) : null), [E]),
       k = t?.user.bio || t?.user_profile?.bio || null,
       A = {
