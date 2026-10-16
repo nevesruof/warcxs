@@ -576,13 +576,14 @@ html {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  filter: blur(10px);
+  filter: blur(6px);
   will-change: transform, opacity, filter;
+  /* Leaving slide: fades out while the next one fades in, so the card is never empty. */
   transition:
-    opacity 0.4s ease,
-    filter 0.45s ease,
-    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0s linear 0.6s;
+    opacity 0.3s ease,
+    filter 0.3s ease,
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.5s;
 }
 .project-slide[data-pos='before'] {
   transform: translate3d(calc(var(--slide-shift) * -1), 0, 0);
@@ -597,9 +598,9 @@ html {
   visibility: visible;
   pointer-events: auto;
   transition:
-    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.06s,
-    filter 0.55s ease 0.06s,
-    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.04s,
+    opacity 0.45s ease-out,
+    filter 0.45s ease-out,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
     visibility 0s;
 }
 .project-carousel__viewport[data-dragging] .project-slide[data-pos='active'] {

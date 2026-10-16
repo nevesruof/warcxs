@@ -113,20 +113,6 @@ function Slide({ slide, position, index, total }) {
   });
 }
 
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(
-    () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  useEffect(() => {
-    if (typeof matchMedia !== "function") return;
-    const query = matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(query.matches);
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  return reduced;
-}
-
 export function ProjectCarousel({ slides = PROJECT_SLIDES, duration = SLIDE_DURATION_MS }) {
   const count = slides.length;
   const [index, setIndex] = useState(0);
@@ -134,7 +120,6 @@ export function ProjectCarousel({ slides = PROJECT_SLIDES, duration = SLIDE_DURA
   const [pressed, setPressed] = useState(false);
   const [onScreen, setOnScreen] = useState(true);
   const [tabVisible, setTabVisible] = useState(() => !document.hidden);
-  const reduced = useReducedMotion();
   const root = useRef(null);
   const viewport = useRef(null);
   const gesture = useRef(null);
@@ -162,7 +147,10 @@ export function ProjectCarousel({ slides = PROJECT_SLIDES, duration = SLIDE_DURA
   }, []);
 
   const paused = focused || pressed || !onScreen || !tabVisible;
-  const autoplay = !reduced && count > 1;
+  // Autoplay does not depend on the OS "reduce motion" setting: many desktops report it
+  // (animations off, battery saver) and the carousel would never advance. Reduced-motion
+  // users get a plain cross-fade instead (see profile.css).
+  const autoplay = count > 1;
 
   // The timer, not the CSS animation, decides when to advance: global
   // performance/reduced-motion rules shorten CSS animations to ~0ms, and the
