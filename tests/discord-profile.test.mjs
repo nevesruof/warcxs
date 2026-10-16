@@ -176,3 +176,17 @@ test("Profile API reports errors without replacing a valid profile with empty im
   assert.equal(response.code, 503);
   assert.equal(response.body.user, undefined);
 });
+
+test("Names follow the live account and are sanitised", () => {
+  const next = profileImageFields({ ...user, username: "warcxss", global_name: "  New\u0000 Name  " });
+  assert.equal(next.username, "warcxss");
+  assert.equal(next.global_name, "New Name");
+  assert.equal(next.display_name, "New Name");
+  const merged = mergeProfileImages({ ...user, display_name: "Old" }, { ...user, username: "warcxss", global_name: "New Name" });
+  assert.equal(merged.display_name, "New Name");
+  // No global name set: the username is shown.
+  const plain = profileImageFields({ ...user, username: "warcxss", global_name: null });
+  assert.equal(plain.display_name, "warcxss");
+  // A payload without names keeps the previous ones.
+  assert.equal(profileImageFields(user).display_name, undefined);
+});

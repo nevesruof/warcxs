@@ -14,3 +14,7 @@ La web espera este mismo ID; la actividad nueva aparecerá después de actualiza
 - En Vercel define `ACTIVITY_BOT_TOKEN` con el mismo valor. Se envía siempre que exista, también con la URL por defecto.
 - El puerto sirve HTTP plano: pon HTTPS delante (por ejemplo Cloudflare Tunnel o un proxy inverso) y apunta `ACTIVITY_BOT_URL` a esa URL `https://`, para que el token no viaje en claro.
 - Una sesión que se corta menos de 120 s (reconexión del gateway, fallo de Roblox) se reabre en vez de duplicarse. Las sesiones terminadas hace más de 90 días se borran una vez al día.
+
+## Perfil (foto, banner, nombre)
+
+El bot consulta el perfil público de la cuenta seguida cada 5 minutos y lo publica como `profile` en `/api/activity`; la web lo usa para foto, banner, usuario y nombre visible sin depender de servicios de terceros. Tras actualizar `main.py` hay que reiniciar el bot.

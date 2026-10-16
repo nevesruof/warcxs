@@ -1,7 +1,22 @@
 import { DISCORD_USER_ID } from "../config/discord.js";
 export { DISCORD_USER_ID };
 const imageHash = /^(?:a_)?[a-f0-9]{32}$/;
-const profileFields = ["avatar", "banner", "accent_color", "discriminator"];
+const profileFields = [
+  "avatar",
+  "banner",
+  "accent_color",
+  "discriminator",
+  "username",
+  "global_name",
+  "display_name",
+];
+
+// Names are plain text shown in the UI: strip control characters, cap length.
+function cleanName(value) {
+  if (typeof value !== "string") return null;
+  const text = value.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 64);
+  return text || null;
+}
 
 export function profileImageFields(user) {
   if (user?.id !== DISCORD_USER_ID)
@@ -22,6 +37,17 @@ export function profileImageFields(user) {
     fields.accent_color = user.accent_color;
   if (/^\d{1,4}$/.test(user.discriminator))
     fields.discriminator = user.discriminator;
+  // Names follow the live account; a missing name keeps the last known one.
+  const username = cleanName(user.username);
+  const globalName = cleanName(user.global_name);
+  if (username) fields.username = username;
+  if (globalName) {
+    fields.global_name = globalName;
+    fields.display_name = globalName;
+  } else if (username && Object.hasOwn(user, "global_name")) {
+    fields.global_name = null;
+    fields.display_name = username;
+  }
   return fields;
 }
 

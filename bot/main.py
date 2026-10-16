@@ -40,6 +40,23 @@ class Tracker(discord.Client):
         # reset the start time of games that carry no Discord timestamps.
         self.stale = ({}, 0.0)
         self.target_guild = None
+        # Public account fields (name, avatar, banner); the site mirrors these.
+        self.profile = None
+
+    async def refresh_profile(self):
+        try:
+            user = await self.fetch_user(USER_ID)
+        except (discord.HTTPException, asyncio.TimeoutError, discord.ClientException):
+            return  # keep the last known profile
+        accent = getattr(user, 'accent_colour', None)
+        self.profile = {
+            'id': str(user.id), 'username': user.name,
+            'global_name': getattr(user, 'global_name', None),
+            'avatar': user.avatar.key if user.avatar else None,
+            'banner': user.banner.key if getattr(user, 'banner', None) else None,
+            'accent_color': accent.value if accent else None,
+            'discriminator': str(user.discriminator),
+        }
 
     def capture(self, member):
         items = {}
@@ -94,6 +111,7 @@ class Tracker(discord.Client):
 
     async def on_ready(self):
         await self.seed()
+        await self.refresh_profile()
 
     async def on_resumed(self):
         await self.seed()
@@ -126,6 +144,8 @@ class Tracker(discord.Client):
             ticks += 1
             if ticks % 1440 == 0:  # once a day
                 self.db.prune()
+            if ticks % 5 == 0 and self.is_ready():  # name/avatar/banner every 5 minutes
+                await self.refresh_profile()
             if self.is_ready() and self.target_guild is not None:
                 self.db.observe(DISCORD_HISTORY, {k:v for k,v in self.observed.items() if v['type'] != 4})
                 self.db.observe(STATUS_HISTORY, {self.live['status']:{'name':self.live['status']}})
@@ -225,6 +245,7 @@ def create_app(bot):
             roblox_history = bot.db.history('roblox')
             snapshot_cache['body'] = {'discordUserId': str(USER_ID),
                 'discord': dict(bot.live, connected=bot.is_ready()),
+                'profile': bot.profile,
                 'recentActivities': bot.db.history(DISCORD_HISTORY, limit=100, exclude_kind='spotify'),
                 'recentSongs': bot.db.history(DISCORD_HISTORY, limit=100, kind='spotify'),
                 'recentStatuses': bot.db.history(STATUS_HISTORY, limit=100),
