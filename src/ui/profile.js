@@ -3437,7 +3437,7 @@ var $t = ({
   rn = 12e5,
   an = 6e5,
   on = 8e3,
-  sn = 22e3,
+  sn = 10e3,
   cn = 2e4,
   ln = /([a-z])\1{1,}/gi,
   un = /[aeiouy]/i,
@@ -5511,7 +5511,9 @@ var SpotifyLyrics = ({
       D = !e.timestamps.paused,
       O = Ar(Date.now() - e.timestamps.start, 0, Math.max(w, 1)),
       k = Ar(c * 1e3, 0, Math.max(w, 1)),
-      A = s === `spotify` && Math.abs(k - O) < hr,
+      // Follow the player only while it is actually playing; when it is paused, buffering or
+      // blocked its clock is stale, so the lyrics fall back to the live Discord timeline.
+      A = s === `spotify` && l && Math.abs(k - O) < hr,
       j = A ? k : O,
       M = (i || t) && (A ? l : D),
       N = !!(u && f === E),
