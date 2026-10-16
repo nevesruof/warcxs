@@ -9,6 +9,7 @@ const profileFields = [
   "username",
   "global_name",
   "display_name",
+  "display_name_styles",
 ];
 
 // Names are plain text shown in the UI: strip control characters, cap length.
@@ -16,6 +17,17 @@ function cleanName(value) {
   if (typeof value !== "string") return null;
   const text = value.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, 64);
   return text || null;
+}
+
+// Display-name style (font, effect, colours) as Discord reports it; anything
+// malformed is ignored so the style that is already shown stays.
+function cleanStyles(value) {
+  if (!value || typeof value !== "object") return null;
+  const int = (n, max) => Number.isInteger(n) && n >= 0 && n <= max;
+  if (!int(value.font_id, 100) || !int(value.effect_id, 100)) return null;
+  const colors = Array.isArray(value.colors) ? value.colors : [];
+  if (colors.length > 3 || !colors.every((c) => int(c, 16777215))) return null;
+  return { font_id: value.font_id, effect_id: value.effect_id, colors };
 }
 
 export function profileImageFields(user) {
@@ -48,14 +60,22 @@ export function profileImageFields(user) {
     fields.global_name = null;
     fields.display_name = username;
   }
+  if (Object.hasOwn(user, "display_name_styles")) {
+    const styles = cleanStyles(user.display_name_styles);
+    if (styles) fields.display_name_styles = styles;
+    else if (user.display_name_styles === null) fields.display_name_styles = null;
+  }
   return fields;
 }
+
+const same = (a, b) =>
+  a === b || (a && b && typeof a === "object" && JSON.stringify(a) === JSON.stringify(b));
 
 export function mergeProfileImages(current, incoming) {
   const fields = profileImageFields(incoming);
   if (
     profileFields.every(
-      (key) => !Object.hasOwn(fields, key) || current[key] === fields[key],
+      (key) => !Object.hasOwn(fields, key) || same(current[key], fields[key]),
     )
   )
     return current;

@@ -45,18 +45,20 @@ class Tracker(discord.Client):
 
     async def refresh_profile(self):
         try:
-            user = await self.fetch_user(USER_ID)
+            raw = await self.http.get_user(USER_ID)  # raw REST payload: also carries newer fields
         except (discord.HTTPException, asyncio.TimeoutError, discord.ClientException):
             return  # keep the last known profile
-        accent = getattr(user, 'accent_colour', None)
-        self.profile = {
-            'id': str(user.id), 'username': user.name,
-            'global_name': getattr(user, 'global_name', None),
-            'avatar': user.avatar.key if user.avatar else None,
-            'banner': user.banner.key if getattr(user, 'banner', None) else None,
-            'accent_color': accent.value if accent else None,
-            'discriminator': str(user.discriminator),
+        profile = {
+            'id': str(raw.get('id', USER_ID)), 'username': raw.get('username'),
+            'global_name': raw.get('global_name'),
+            'avatar': raw.get('avatar'), 'banner': raw.get('banner'),
+            'accent_color': raw.get('accent_color'),
+            'discriminator': str(raw.get('discriminator', '0')),
         }
+        # Font/effect/colours of the display name, when Discord reports them.
+        if 'display_name_styles' in raw:
+            profile['display_name_styles'] = raw['display_name_styles']
+        self.profile = profile
 
     def capture(self, member):
         items = {}

@@ -18,7 +18,14 @@ export function createActivityHistory(fetcher, storage, publish) {
     Array.isArray(v.activities);
   try {
     const saved = JSON.parse(storage.getItem(KEY));
-    if (valid(saved)) state = saved;
+    if (valid(saved))
+      // A saved copy is a snapshot of the past: whatever was still "active" then may
+      // have ended or changed since, so it is dropped until the server confirms it.
+      state = {
+        ...saved,
+        recentActivities: saved.recentActivities.filter((a) => !a.active),
+        activities: [],
+      };
   } catch {}
   const content = (value) =>
     JSON.stringify([

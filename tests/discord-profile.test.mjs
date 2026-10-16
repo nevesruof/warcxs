@@ -190,3 +190,16 @@ test("Names follow the live account and are sanitised", () => {
   // A payload without names keeps the previous ones.
   assert.equal(profileImageFields(user).display_name, undefined);
 });
+
+test("Display-name style follows Discord and malformed styles are ignored", () => {
+  const styles = { font_id: 11, effect_id: 2, colors: [16711680, 255] };
+  const next = profileImageFields({ ...user, display_name_styles: styles });
+  assert.deepEqual(next.display_name_styles, styles);
+  const merged = mergeProfileImages({ ...user, display_name_styles: { font_id: 8, effect_id: 4, colors: [16777215] } }, { ...user, display_name_styles: styles });
+  assert.deepEqual(merged.display_name_styles, styles);
+  // Same style again: no new object, so nothing re-publishes.
+  const current = { ...user, display_name_styles: styles };
+  assert.equal(mergeProfileImages(current, { ...user, display_name_styles: { ...styles } }), current);
+  assert.equal("display_name_styles" in profileImageFields({ ...user, display_name_styles: { font_id: "x" } }), false);
+  assert.equal(profileImageFields({ ...user, display_name_styles: null }).display_name_styles, null);
+});
