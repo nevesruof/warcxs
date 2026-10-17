@@ -52,6 +52,12 @@ Parte de `.env.example` y configura las variables en Vercel o en tu entorno de s
 | `YOUTUBE_API_KEY` | Habilita audio sincronizado dentro de la página. Si falta o se agota la cuota, `/api/playback` intenta la búsqueda pública de YouTube (desactívalo con `YOUTUBE_SCRAPE_FALLBACK=off`) y devuelve el motivo en `reason`. |
 | `YOUTUBE_SCRAPE_FALLBACK` | `off` desactiva la búsqueda pública de respaldo. |
 | `IGDB_CLIENT_ID` / `IGDB_CLIENT_SECRET` | Opcionales: amplían las fichas de juegos con datos de IGDB. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Redis (Upstash) donde se guarda el guestbook. Se crean solos al conectar un store de Upstash Redis desde Vercel → Storage (también acepta `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`). Sin ellos el guestbook aparece como desconectado. |
+| `GUESTBOOK_SECRET` | Cadena aleatoria larga. Firma los enlaces de borrado y anonimiza las IP. Sin ella no se pueden publicar mensajes. |
+| `GUESTBOOK_WEBHOOK_URL` | Opcional: webhook de un canal de Discord. Cada mensaje nuevo llega con un enlace para borrarlo (pide confirmación). |
+| `GUESTBOOK_BLOCKED_WORDS` | Opcional: palabras prohibidas separadas por comas. |
+
+**Guestbook:** botón del libro en la barra lateral. Máximo 3 mensajes por hora por persona, 200 caracteres, sin enlaces, con campo trampa anti‑bots; se guardan los 500 más recientes.
 
 Nunca expongas estas variables en el navegador ni las subas al repositorio.
 

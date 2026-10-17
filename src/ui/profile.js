@@ -6,6 +6,7 @@ import { createScrollArea } from './scroll-area.js';
 import { startBackgroundRefresh } from '../services/background-refresh.js';
 import {createRecentSongs} from './recent-songs.js';
 import {ProjectCarousel} from './projects-carousel.js';
+import {createGuestbook} from './guestbook.js';
 import {watchMood} from '../services/mood.js';
 import {Radio as K, Pause as W, Play as G, Headphones as R, Expand as H} from './music-icons.js';
 import {playbackSong, isSelectedSong, statsTrackKey, SONG_AUDIO_FIELDS} from '../services/music-playback.js';
@@ -8659,7 +8660,7 @@ var ss = () =>
       id: t,
       className: `social-rail ${e}`.trim(),
       'aria-label': `Connect`,
-      children: ls.map((e) =>
+      children: [...ls.map((e) =>
         (0, jsxRuntime.jsx)(
           `a`,
           {
@@ -8683,7 +8684,7 @@ var ss = () =>
           },
           e.name,
         ),
-      ),
+      ), (0, jsxRuntime.jsx)(GuestbookButton, {}, `guestbook`)],
     }),
   ds = `cheatinformer:open-home-panel`;
 async function subscribeProfile(listener) {
@@ -9016,3 +9017,5 @@ function MoodPill() {
     ],
   });
 }
+
+const GuestbookButton = createGuestbook((...args) => ve.createPortal(...args));
